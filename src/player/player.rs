@@ -14,24 +14,30 @@ impl Player{
     }
 
     pub fn play(&mut self, track:Track){
-        todo!()
+        self.queue.add(track);
+        self.state = PlaybackState::Playing;
     }
     pub fn pause(&mut self){
-        todo!()
+        if self.state == PlaybackState::Playing {
+            self.state = PlaybackState::Paused;
+        }
     }
     pub fn resume(&mut self){
-        todo!()
+        if self.state == PlaybackState::Paused {
+            self.state = PlaybackState::Playing;
+        }
     }
     pub fn stop(&mut self){
-        todo!()
+        self.state = PlaybackState::Stopped;
+        // self.queue.current_index = None;
     }
-    pub fn next(&mut self) {
-        todo!()
-    }
-    pub fn previous(&mut self) {
-        todo!()
-    }
+    // pub fn next(&mut self) {
+    //     todo!()
+    // }
+    // pub fn previous(&mut self) {
+    //     todo!()
+    // }
     pub fn set_volume(&mut self, level: u8) {
-        todo!()
+        self.volume = level.min(100);
     }
 }
