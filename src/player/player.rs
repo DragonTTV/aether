@@ -24,15 +24,18 @@ impl Player{
     }
     pub fn pause(&mut self){
         if self.state == PlaybackState::Playing {
+            self.audio.pause();
             self.state = PlaybackState::Paused;
         }
     }
     pub fn resume(&mut self){
         if self.state == PlaybackState::Paused {
+            self.audio.resume();
             self.state = PlaybackState::Playing;
         }
     }
     pub fn stop(&mut self){
+        self.audio.stop();
         self.state = PlaybackState::Stopped;
         // self.queue.current_index = None;
     }
@@ -43,6 +46,7 @@ impl Player{
     //     todo!()
     // }
     pub fn set_volume(&mut self, level: u8) {
+        self.audio.set_volume(level as f32/100.0);
         self.volume = level.min(100);
     }
 }

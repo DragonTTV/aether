@@ -25,4 +25,19 @@ impl AudioEngine{
         self.player.append(source);
         self.player.play();
     }
+    pub fn pause(&self) {
+        self.player.pause();
+    }
+
+    pub fn resume(&self) {
+        self.player.play();
+    }
+
+    pub fn stop(&self) {
+        self.player.stop();
+    }
+
+    pub fn set_volume(&self, volume: f32) {
+        self.player.set_volume(volume);
+    }
 }
