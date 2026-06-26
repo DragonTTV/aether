@@ -1,3 +1,4 @@
+use crate::player::{PlaybackState, Queue, Track};
 pub struct Player{
     pub state: PlaybackState,
     pub queue: Queue,
@@ -14,6 +15,7 @@ impl Player{
     }
 
     pub fn play(&mut self, track:Track){
+        println!("Playing: {}", track.source);
         self.queue.add(track);
         self.state = PlaybackState::Playing;
     }

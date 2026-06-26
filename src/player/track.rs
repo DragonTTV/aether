@@ -13,3 +13,19 @@ pub struct Metadata{
     pub artwork: Option<String>,
     pub release_date: Option<String>,
 }
+
+impl Track{
+    pub fn new(source: String) -> Self{
+        Self{
+            source,
+            metadata: Metadata{
+                title: None,
+                artist: None,
+                duration: None,
+                album: None,
+                artwork: None,
+                release_date: None,
+            },
+        }
+    } 
+}

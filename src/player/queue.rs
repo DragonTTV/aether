@@ -1,3 +1,4 @@
+use crate::player::{Track};
 pub struct Queue{
     pub tracks: Vec<Track>,
     pub current_index: Option<usize>, 
@@ -43,5 +44,5 @@ impl Queue {
         self.tracks.clear();
         self.current_index = None;
     }
-    
+
 }
