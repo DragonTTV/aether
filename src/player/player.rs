@@ -1,8 +1,9 @@
-use crate::player::{PlaybackState, Queue, Track};
+use crate::{audio::AudioEngine, player::{PlaybackState, Queue, Track}};
 pub struct Player{
     pub state: PlaybackState,
     pub queue: Queue,
     pub volume: u8,
+    pub audio: AudioEngine,
 }
 
 impl Player{
@@ -11,11 +12,13 @@ impl Player{
             state: PlaybackState::Stopped,
             queue: Queue::new(),
             volume: 50,
+            audio: AudioEngine::new(),
         }
     }
 
     pub fn play(&mut self, track:Track){
         println!("Playing: {}", track.source);
+        self.audio.play(&track);
         self.queue.add(track);
         self.state = PlaybackState::Playing;
     }
