@@ -21,7 +21,7 @@ fn main() {
                 reader.read_line(&mut command).unwrap();
 
                 let parts: Vec<&str> = command.trim().splitn(2, ' ').collect();
-                
+
                 if parts.is_empty() {
                     continue;
                 }
@@ -34,7 +34,27 @@ fn main() {
                         let track = Track::new(parts[1].to_string());
                         player.play(track);
                     }
-                    _ => {}
+                    "pause" => {
+                        player.pause();
+                    }
+                    "resume" => {
+                        player.resume();
+                    }
+                    "stop" =>{
+                        player.stop();
+                    }
+                    "volume" => {
+                        if parts.len() <2 {
+                            continue;
+                        }
+                        let level = match parts[1].parse::<u8>() {
+                            Ok(level) => level,
+                            Err(_) => continue,
+                        };
+                        println!("Volume set to: {}", level);
+                        player.set_volume(level);
+                    }
+                    _ => {eprintln!("Unknown command: {}", parts[0]);}
                 }
             }
             Err(e) => eprintln!("{e}"),
