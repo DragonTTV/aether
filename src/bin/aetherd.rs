@@ -9,12 +9,12 @@ fn main() {
     let _ = fs::remove_file(socket_path);
     
     let listener = UnixListener::bind(socket_path).unwrap();
-
+    listener.set_nonblocking(true).unwrap();
     println!("Aether daemon listening on {}", socket_path);
 
-    for stream in listener.incoming() {
-        match stream {
-            Ok(stream) => {
+    loop{
+        let handled_command = match listener.accept() {
+            Ok((stream, _)) => {
                 let mut reader = BufReader::new(stream);
 
                 let mut command = String::new();
@@ -34,6 +34,9 @@ fn main() {
                         let track = Track::new(parts[1].to_string());
                         player.play(track);
                     }
+                    "play_now" => {
+                        todo!();
+                    }
                     "pause" => {
                         player.pause();
                     }
@@ -51,13 +54,42 @@ fn main() {
                             Ok(level) => level,
                             Err(_) => continue,
                         };
-                        println!("Volume set to: {}", level);
                         player.set_volume(level);
+                    }
+                    "next" => {
+                        player.next();
+                    }
+                    "previous" => {
+                        player.previous();
+                    }
+                    "queue" => {
+                        if parts.len() < 2 {
+                            continue;
+                        }
+                        let queue_parts: Vec<&str> = parts[1].splitn(2, ' ').collect();
+                        match queue_parts[0]{
+                            "list" => {
+                                for (i, track) in player.queue().tracks().iter().enumerate() {
+                                    println!("{i}: {}", track.source);
+                                }
+                            }
+                            "clear" => {
+                                player.queue.clear();
+                            }
+                            _ => {}
+                        }
                     }
                     _ => {eprintln!("Unknown command: {}", parts[0]);}
                 }
+                true
             }
-            Err(e) => eprintln!("{e}"),
-        }
+            Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {false}
+            Err(e) => {
+                eprintln!("{e}");
+                false
+            },
+        };
+        player.update();
+        if !handled_command {std::thread::sleep(std::time::Duration::from_millis(50));}
     }
 }

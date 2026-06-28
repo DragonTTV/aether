@@ -11,8 +11,12 @@ pub struct Cli{
 pub enum Command{
     /// Play a local file or URL.
     Play{
+        
+        #[arg(short = 'n', long = "now")]
+        now:bool,
         /// File, directory or URL to play.
-        source: String
+        source: String,
+
     },
     /// Pauses the current song playing.
     Pause,
@@ -48,6 +52,7 @@ pub enum Command{
     Now,
     /// Set the playback volume (0–100).
     Volume{level: u8},
+    Status
 }
 #[derive(Subcommand)]
 pub enum QueueCommand{
@@ -63,7 +68,7 @@ pub enum QueueCommand{
     },
     /// Display the current queue.
     List,
-    /// Display the current queue.
+    /// Clears the current queue.
     Clear
 }
 #[derive(Subcommand)]

@@ -35,14 +35,39 @@ impl Queue {
         }
         Ok(())
     }
-    pub fn list(&self){
-        for (index, track) in self.tracks.iter().enumerate() {
-            println!("{}: {}", index, track.source);
-        }
+    pub fn current(&self) -> Option<&Track>{
+        self.current_index.and_then(|index| self.tracks.get(index))
     }
+    pub fn is_empty(&self) -> bool {
+       self.tracks.is_empty()
+    }
+    pub fn tracks(&self) -> &[Track] {
+        &self.tracks
+    }
+    
     pub fn clear(&mut self){
         self.tracks.clear();
         self.current_index = None;
     }
-
+    pub fn next(&mut self) -> bool{
+        if let Some(current) = self.current_index{
+            if current == self.tracks.len()-1{
+                return false;
+            }
+            self.current_index = Some(current + 1);
+            return true;
+            
+        }
+        false
+    }
+    pub fn previous(&mut self) -> bool {
+        if let Some(current) = self.current_index{
+            if current == 0{
+                return false;
+            }
+            self.current_index = Some(current - 1);
+            return true;
+        }
+        false
+    }
 }

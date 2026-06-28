@@ -14,9 +14,12 @@ impl AudioEngine{
     pub fn new() -> Self{
         let device = DeviceSinkBuilder::open_default_sink().unwrap();
         let player = Player::connect_new(device.mixer());
+        
         Self{device, player}
     }
-
+    pub fn is_finished(&self) -> bool {
+        self.player.empty()
+    }   
     pub fn play(&self, track: &Track){
         let file = File::open(&track.source).unwrap();
         let reader = BufReader::new(file);
@@ -35,6 +38,7 @@ impl AudioEngine{
 
     pub fn stop(&self) {
         self.player.stop();
+        self.player.sleep_until_end();
     }
 
     pub fn set_volume(&self, volume: f32) {
