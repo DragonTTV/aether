@@ -11,28 +11,37 @@ impl Queue {
             current_index: None,
         }
     }
-
-    pub fn add(&mut self, track: Track){
-        self.tracks.push(track);
-        if self.current_index.is_none(){
-            self.current_index = Some(0);
-        }
+    pub fn set_current(&mut self, index: usize) {
+        self.current_index = Some(index);
     }
-    pub fn remove(&mut self, index: usize)-> Result<(), String>{
-        if index >= self.tracks.len(){
+    pub fn clear_current(&mut self) {
+        self.current_index = None;
+    }
+    pub fn add(&mut self, track: Track)->usize{
+        self.tracks.push(track);
+        self.tracks.len() - 1
+    }
+    pub fn remove(&mut self, index: usize) -> Result<(), String> {
+        if index >= self.tracks.len() {
             return Err("Index out of bounds".to_string());
         }
+
+        if let Some(current) = self.current_index {
+            if index == current {
+                return Err("Cannot remove the currently playing track.".to_string());
+            }
+        }
+
         self.tracks.remove(index);
 
-        if self.tracks.is_empty(){
-                self.current_index = None;
-        } else if let Some(current) = self.current_index{
-            if index == current{
-                self.current_index = Some(0);
-            }else if index < current{
+        if self.tracks.is_empty() {
+            self.current_index = None;
+        } else if let Some(current) = self.current_index {
+            if index < current {
                 self.current_index = Some(current - 1);
             }
         }
+
         Ok(())
     }
     pub fn current(&self) -> Option<&Track>{
@@ -49,9 +58,24 @@ impl Queue {
         self.tracks.clear();
         self.current_index = None;
     }
+
+    pub fn clear_upcoming(&mut self){
+        let Some(current) = self.current_index else {
+            self.clear();
+            return;
+        };
+
+        let current_track = self.tracks[current].clone();
+
+        self.tracks.clear();
+        self.tracks.push(current_track);
+        self.current_index = Some(0);
+    }
+
     pub fn next(&mut self) -> bool{
         if let Some(current) = self.current_index{
-            if current == self.tracks.len()-1{
+            if current == self.tracks.len() - 1 {
+                // self.current_index = None;
                 return false;
             }
             self.current_index = Some(current + 1);

@@ -1,10 +1,10 @@
 use std::time::Duration;
-
+#[derive(Clone)]
 pub struct Track {
     pub source: String,
     pub metadata: Metadata,
 }
-
+#[derive(Clone)]
 pub struct Metadata{
     pub title: Option<String>,
     pub artist: Option<String>,

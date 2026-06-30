@@ -1,14 +1,20 @@
 use clap::Parser;
 use aether::cli::{Cli, Command, QueueCommand};
 
-use std::io::Write;
+use std::io::{BufReader, Write, Read};
 use std::os::unix::net::UnixStream;
 
 fn main() {
     let cli = Cli::parse();
     fn send_command(command: String) {
         let mut stream = UnixStream::connect("/tmp/aether.sock").unwrap();
-        stream.write_all(command.as_bytes()).unwrap();
+        writeln!(stream, "{command}").unwrap();
+        stream.flush().unwrap();
+
+        let mut reader = BufReader::new(stream);
+        let mut response = String::new();
+        reader.read_to_string(&mut response).unwrap();
+        println!("{}", response.trim());
     }
     match cli.command {
         Command::Play{source, now} => {
@@ -36,12 +42,16 @@ fn main() {
             send_command("next \n".to_string());
         }
         Command::Prev => {
-            send_command("previous \n".to_string());
+            send_command("prev \n".to_string());
         }
         Command::Queue {subcommand}=> {
             match subcommand{
-                QueueCommand::Add {source}=> {}
-                QueueCommand::Remove {index}=> {}
+                QueueCommand::Add {source}=> {
+                    send_command(format!("queue add {}", source));
+                }
+                QueueCommand::Remove {index}=> {
+                    send_command(format!("queue remove {}", index));
+                }
                 QueueCommand::Clear => {
                     send_command("queue clear".to_string());
                 }

@@ -19,21 +19,20 @@ impl Player{
         if self.state != PlaybackState::Playing {
             return;
         }
-
+        
         if self.audio.is_finished() {
-            self.next();
+            let _ = self.next();
         }
     }
     pub fn play(&mut self, track:Track){
-        // println!("Playing: {}", track.source);
-        // self.audio.play(&track);
-        let should_start = self.queue.is_empty();
-        self.queue.add(track);
-        if should_start{
-            if let Some(track) = self.queue.current(){
-                self.audio.play(track);
-                self.state = PlaybackState::Playing;
-            }
+
+        let index = self.queue.add(track);
+        if self.state == PlaybackState::Stopped{
+            self.queue.set_current(index);
+            let track = self.queue.current().unwrap();
+
+            self.audio.play(track);
+            self.state = PlaybackState::Playing;
         }
     }
     pub fn pause(&mut self){
@@ -53,36 +52,57 @@ impl Player{
         self.state = PlaybackState::Stopped;
         // self.queue.current_index = None;
     }
-    pub fn next(&mut self){
+    pub fn next(&mut self) -> Result<(), String>{
         if self.queue.next(){
             self.audio.stop();
+
             if let Some(track) = self.queue.current(){
                 self.audio.play(track);
                 self.state = PlaybackState::Playing;
+                return Ok(());
             }
-        }else {
+            return Err("No current track.".to_string());
+        }   
+            self.queue.clear_current();
             self.state = PlaybackState::Stopped;
-        }
+            Err("End of queue.".to_string())
+        
     }
-    pub fn previous(&mut self) {
+    pub fn previous(&mut self) -> Result<(), String>{
         if self.queue.previous(){
             self.audio.stop();
-            if let Some(track) = self.queue.current(){
-                self.audio.play(track);
-                self.state = PlaybackState::Playing;
-            }
-        }else {
-            self.state = PlaybackState::Stopped;
+            let Some(track) = self.queue.current() else{
+                return Err("No current track".to_string());
+            };
+
+            self.audio.play(track);
+            self.state = PlaybackState::Playing;
+            return Ok(());
         }
+        Err("Already at the beginning of the queue.".to_string())
     }
     pub fn set_volume(&mut self, level: u8) {
-        self.audio.set_volume(level as f32/100.0);
-        self.volume = level.min(100);
+        let level = level.clamp(0, 100);
+
+        self.audio.set_volume(level as f32 / 100.0);
+        self.volume = level;
+    }
+    pub fn get_volume(&self) -> u8{
+        self.volume
+    }
+    pub fn clear_queue(&mut self){
+        self.queue.clear_upcoming();
     }
     pub fn status(&self){
         todo!();
     }
     pub fn queue(&self) -> &Queue {
         &self.queue
+    }
+    pub fn current_track(&self) -> Option<&Track> {
+        self.queue.current()
+    }
+    pub fn remove_from_queue(&mut self, index: usize) -> Result<(), String> {
+        self.queue.remove(index)
     }
 }
