@@ -1,9 +1,49 @@
-use crate::{audio::AudioEngine, player::{PlaybackState, Queue, Track, PlayerStatus}};
+use crate::{audio::AudioEngine, player::{PlaybackState, PlayerStatus, Queue, Track}};
 pub struct Player{
     pub state: PlaybackState,
     pub queue: Queue,
     pub volume: u8,
     pub audio: AudioEngine,
+}
+#[derive(Debug)]
+pub enum PlayerError {
+    AlreadyPlaying,
+    AlreadyPaused,
+    AlreadyStopped,
+    NothingPlaying,
+    QueueEmpty,
+    EndOfQueue,
+    BeginningOfQueue
+}
+impl std::fmt::Display for PlayerError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PlayerError::AlreadyPaused => {
+                write!(f, "Playback is already paused.")
+            }
+            PlayerError::AlreadyPlaying => {
+                write!(f, "Playback is already playing.")
+            }
+            PlayerError::AlreadyStopped => {
+                write!(f, "Playback is already stopped.")
+            }
+            PlayerError::NothingPlaying => {
+                write!(f, "Nothing is currently playing.")
+            }
+            PlayerError::QueueEmpty => {
+                write!(f, "Queue is empty.")
+            }
+            PlayerError::EndOfQueue => {
+                write!(f, "Reached the end of the queue.")
+            }
+            PlayerError::BeginningOfQueue => {
+                write!(f, "Already at the beginning of the queue.")
+            }
+        }
+    }
+}
+pub struct PlaybackOutcome {
+    pub started_playing: bool,
 }
 
 impl Player{
@@ -19,73 +59,100 @@ impl Player{
         if self.state != PlaybackState::Playing {
             return;
         }
-        
         if self.audio.is_finished() {
             let _ = self.next();
         }
     }
-    pub fn play(&mut self, track:Track){
-
+    pub fn play(&mut self, track:Track)->PlaybackOutcome{
+        let started_playing = self.state==PlaybackState::Stopped;
         let index = self.queue.add(track);
-        if self.state == PlaybackState::Stopped{
+        if started_playing{
             self.queue.set_current(index);
             let track = self.queue.current().unwrap();
-
             self.audio.play(track);
             self.state = PlaybackState::Playing;
         }
+        PlaybackOutcome { started_playing }
     }
-    pub fn pause(&mut self){
-        if self.state == PlaybackState::Playing {
-            self.audio.pause();
-            self.state = PlaybackState::Paused;
+    pub fn pause(&mut self) -> Result<(), PlayerError>{
+        match self.state {
+            PlaybackState::Playing => {
+                self.audio.pause();
+                self.state = PlaybackState::Paused;
+                Ok(())
+            }
+            PlaybackState::Paused => Err(PlayerError::AlreadyPaused),
+            PlaybackState::Stopped => Err(PlayerError::NothingPlaying),
         }
     }
-    pub fn resume(&mut self){
-        if self.state == PlaybackState::Paused {
-            self.audio.resume();
-            self.state = PlaybackState::Playing;
+    pub fn resume(&mut self) -> Result<(), PlayerError>{
+        match self.state{
+            PlaybackState::Paused => {
+                self.audio.resume();
+                self.state = PlaybackState::Playing;
+                Ok(())
+            },
+            PlaybackState::Playing => Err(PlayerError::AlreadyPlaying),
+            PlaybackState::Stopped => Err(PlayerError::AlreadyStopped),
         }
     }
-    pub fn stop(&mut self){
-        self.audio.stop();
-        self.state = PlaybackState::Stopped;
-        // self.queue.current_index = None;
+    pub fn stop(&mut self) -> Result<(), PlayerError>{
+        match self.state{
+            PlaybackState::Playing | PlaybackState::Paused => {
+                self.audio.stop();
+                self.state = PlaybackState::Stopped;
+                Ok(())
+            },
+            PlaybackState::Stopped => Err(PlayerError::AlreadyStopped)
+        }
     }
-    pub fn next(&mut self) -> Result<(), String>{
-        if self.queue.next(){
+    pub fn next(&mut self) -> Result<&Track, PlayerError> {
+        if self.queue.next() {
             self.audio.stop();
 
-            if let Some(track) = self.queue.current(){
-                self.audio.play(track);
-                self.state = PlaybackState::Playing;
-                return Ok(());
-            }
-            return Err("No current track.".to_string());
-        }   
+            let track = self
+                .queue
+                .current()
+                .ok_or(PlayerError::QueueEmpty)?;
+
+            self.audio.play(track);
+            self.state = PlaybackState::Playing;
+
+            Ok(track)
+        } else {
             self.queue.clear_current();
             self.state = PlaybackState::Stopped;
-            Err("End of queue.".to_string())
-        
+
+            Err(PlayerError::EndOfQueue)
+        }
     }
-    pub fn previous(&mut self) -> Result<(), String>{
-        if self.queue.previous(){
+    pub fn previous(&mut self) -> Result<&Track, PlayerError> {
+        if self.queue.previous() {
             self.audio.stop();
-            let Some(track) = self.queue.current() else{
-                return Err("No current track".to_string());
-            };
+
+            let track = self
+                .queue
+                .current()
+                .ok_or(PlayerError::QueueEmpty)?;
 
             self.audio.play(track);
             self.state = PlaybackState::Playing;
-            return Ok(());
+
+            Ok(track)
+        } else {
+            if self.queue.is_empty() {
+                Err(PlayerError::QueueEmpty)
+            } else {
+                Err(PlayerError::BeginningOfQueue)
+            }
         }
-        Err("Already at the beginning of the queue.".to_string())
     }
-    pub fn set_volume(&mut self, level: u8) {
+    pub fn set_volume(&mut self, level: u8){
         let level = level.clamp(0, 100);
 
         self.audio.set_volume(level as f32 / 100.0);
         self.volume = level;
+        
     }
     pub fn get_volume(&self) -> u8{
         self.volume

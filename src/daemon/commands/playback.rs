@@ -8,43 +8,61 @@ pub fn handle(command: &str, argument: Option<&str>, player: &mut Player) -> Res
 
             let track = Track::new(path.to_string());
             let track_name = track.display_name().to_string();
-            player.play(track);
-            
-            Ok(format!("Playing: {track_name}"))
+            let outcome = player.play(track);
+            if outcome.started_playing{
+                Ok(format!("Now Playing: {track_name}"))
+            }else{
+                Ok(format!("Added to queue: {track_name}"))
+            }
+
         } "pause" => {
-            player.pause();
-            Ok("Playback paused".to_string())
+            match player.pause(){
+                Ok(()) => {Ok("Playback paused".to_string())},
+                Err(e) => Ok(e.to_string()),
+            }
         }
 
         "resume" => {
-            player.resume();
-            Ok("Playback resumed".to_string())
+            match player.resume() {
+                Ok(()) => Ok("Playback resumed".to_string()),
+                Err(e) => Ok(e.to_string()),
+            }
         }
 
         "stop" => {
-            player.stop();
-            Ok("Playback stopped".to_string())
+            match player.stop(){
+                Ok(()) => Ok("Playback stopped".to_string()),
+                Err(e) => Ok(e.to_string()),
+            }
         }
 
         "next" => {
-            player.next()?;
+            match player.next() {
+            Ok(track) => Ok(format!(
+                "Skipped to next track.\n\nNow playing: {}",
+                track.display_name()
+            )),
 
-            let track = player.current_track().ok_or("No current track".to_string())?;
-            Ok(format!("Playing: {}",track.display_name()))
+            Err(e) => Ok(e.to_string()),
+            }
         }
 
         "prev" => {
-            player.previous()?;
+            match player.previous() {
+                Ok(track) => Ok(format!(
+                    "Returned to previous track.\n\nNow playing: {}",
+                    track.display_name()
+                )),
 
-            let track = player.current_track().ok_or("No current track".to_string())?;
-            Ok(format!("Playing: {}",track.display_name()))
+                Err(e) => Ok(e.to_string()),
+            }
         }
 
         "volume" => {
             let Some(level) = argument else{
                 return Err("No volume level specified".to_string());
             };
-            let level = level.parse::<u8>().map_err(|_| "Invalid volume level". to_string())?;
+            let level = level.parse::<u8>().map_err(|_| "Invalid volume level".to_string())?;
             player.set_volume(level);
             Ok(format!("Volume set to {}%", player.get_volume()))
         }

@@ -15,31 +15,51 @@ pub fn handle(command: &str, argument: Option<&str>, player: &mut Player,) -> Re
         }
 
         "remove" => {
-            let Some(index) = argument else{
-                return Err("No index specified.".to_string());
+            let Some(index) = argument else {
+                return Err("No queue index specified.".to_string());
             };
-            let index = index.parse::<usize>().map_err(|_|"Invalid index".to_string())?; 
-            player.remove_from_queue(index)?;
-            Ok(format!("Removed track {index}"))
-            
+
+            let index = index
+                .parse::<usize>()
+                .map_err(|_| "Invalid queue index.".to_string())?;
+
+            let track_name = player
+                .queue
+                .tracks()
+                .get(index)
+                .map(|track| track.display_name().to_string());
+
+            player.queue.remove(index)?;
+
+            Ok(match track_name {
+                Some(name) => format!("Removed from queue: {}", name),
+                None => "Track removed.".to_string(),
+            })
         }
 
         "list" => {
             let tracks = player.queue().tracks();
             let current = player.queue().current_index();
-            if tracks.is_empty(){
-                return Ok("Queue is empty".to_string());
+
+            if tracks.is_empty() {
+                return Ok("Queue is empty.".to_string());
             }
-            let list = tracks
-                .iter()
-                .enumerate()
-                .map(|(i, track)| {
-                    let marker = if Some(i) == current { "▶" } else { "" };
-                    format!("{marker} {i}: {}", track.display_name())
-                })
-                .collect::<Vec<_>>()
-                .join("\n");
-            Ok(list)
+
+            let mut output = String::new();
+
+            output.push_str("Queue\n");
+            output.push_str("-----\n\n");
+
+            for (i, track) in tracks.iter().enumerate() {
+                let marker = if Some(i) == current { "▶" } else { "" };
+
+                output.push_str(&format!(
+                    "{marker} [{i}] {}\n",
+                    track.display_name()
+                ));
+            }
+
+            Ok(output)
         }
 
         "clear" => {
