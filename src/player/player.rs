@@ -1,4 +1,4 @@
-use crate::{audio::AudioEngine, player::{PlaybackState, Queue, Track}};
+use crate::{audio::AudioEngine, player::{PlaybackState, Queue, Track, PlayerStatus}};
 pub struct Player{
     pub state: PlaybackState,
     pub queue: Queue,
@@ -93,8 +93,14 @@ impl Player{
     pub fn clear_queue(&mut self){
         self.queue.clear_upcoming();
     }
-    pub fn status(&self){
-        todo!();
+    pub fn status(&self) -> PlayerStatus{
+        PlayerStatus { 
+            state: self.state.clone(), 
+            volume: self.volume, 
+            current_track: self.current_track().cloned(), 
+            current_index: self.queue.current_index(),
+            queue: self.queue.tracks().to_vec(), 
+        }
     }
     pub fn queue(&self) -> &Queue {
         &self.queue

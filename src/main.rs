@@ -37,6 +37,7 @@ fn main() {
             send_command(format!("volume {}\n", level));
         }
         Command::Status => {
+            send_command("status".to_string());        
         }
         Command::Next => {
             send_command("next \n".to_string());

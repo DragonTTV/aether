@@ -47,6 +47,9 @@ impl Queue {
     pub fn current(&self) -> Option<&Track>{
         self.current_index.and_then(|index| self.tracks.get(index))
     }
+    pub fn current_index(&self) -> Option<usize>{
+        self.current_index
+    }
     pub fn is_empty(&self) -> bool {
        self.tracks.is_empty()
     }
