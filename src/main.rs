@@ -39,6 +39,9 @@ fn main() {
         Command::Status => {
             send_command("status".to_string());        
         }
+        Command::Now => {
+            send_command("now".into());
+        }
         Command::Next => {
             send_command("next \n".to_string());
         }

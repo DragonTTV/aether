@@ -1,8 +1,7 @@
 use std::io::{BufRead, BufReader, Write};
-use std::os::linux::raw::stat;
 use std::os::unix::net::UnixStream;
 
-use crate::daemon::commands::{playback, queue, status};
+use crate::daemon::commands::{playback, queue, status, now};
 use crate::player::Player;
 
 pub fn handle(mut stream: UnixStream, player: &mut Player) {
@@ -31,6 +30,7 @@ pub fn handle(mut stream: UnixStream, player: &mut Player) {
             }
         }
         "status" => status::status(player),
+        "now" => now::now(player),
         _ => {
             playback::handle(
                 parts[0],
