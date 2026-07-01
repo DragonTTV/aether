@@ -10,7 +10,7 @@ pub fn now(player: &Player) -> Result<String, String> {
             output.push_str("Now Playing\n");
             output.push_str("-----------\n\n");
 
-            output.push_str(&format!("{}\n", track.source));
+            output.push_str(&format!("{}\n", track.display_name()));
             output.push_str(&format!("State  : {:?}\n", status.state));
             output.push_str(&format!("Volume : {}%", status.volume));
         }

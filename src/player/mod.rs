@@ -7,5 +7,5 @@ pub mod status;
 pub use status::*;
 pub use player::Player;
 pub use queue::Queue;
-pub use track::Track;
+pub use track::{Track, Metadata};
 pub use state::PlaybackState;

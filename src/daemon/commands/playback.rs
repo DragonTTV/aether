@@ -7,9 +7,10 @@ pub fn handle(command: &str, argument: Option<&str>, player: &mut Player) -> Res
             };
 
             let track = Track::new(path.to_string());
+            let track_name = track.display_name().to_string();
             player.play(track);
-
-            Ok(format!("Playing: {path}"))
+            
+            Ok(format!("Playing: {track_name}"))
         } "pause" => {
             player.pause();
             Ok("Playback paused".to_string())
@@ -29,14 +30,14 @@ pub fn handle(command: &str, argument: Option<&str>, player: &mut Player) -> Res
             player.next()?;
 
             let track = player.current_track().ok_or("No current track".to_string())?;
-            Ok(format!("Playing: {}",track.source))
+            Ok(format!("Playing: {}",track.display_name()))
         }
 
         "prev" => {
             player.previous()?;
 
             let track = player.current_track().ok_or("No current track".to_string())?;
-            Ok(format!("Playing: {}",track.source))
+            Ok(format!("Playing: {}",track.display_name()))
         }
 
         "volume" => {

@@ -12,7 +12,7 @@ pub fn status(player: &Player) -> Result<String, String> {
         Some(track) => {
             output.push_str(&format!(
                 "Now Playing : {}\n",
-                track.source
+                track.display_name()
             ));
         }
         None => output.push_str("Now Playing : Nothing\n"),
@@ -22,9 +22,9 @@ pub fn status(player: &Player) -> Result<String, String> {
 
     for (i, track) in status.queue.iter().enumerate() {
         if Some(i) == status.current_index {
-            output.push_str(&format!("▶ {}\n", track.source));
+            output.push_str(&format!("▶ {}\n", track.display_name()));
         } else {
-            output.push_str(&format!("  {}\n", track.source));
+            output.push_str(&format!("  {}\n", track.display_name()));
         }
     }
 

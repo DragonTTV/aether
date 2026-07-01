@@ -8,9 +8,10 @@ pub fn handle(command: &str, argument: Option<&str>, player: &mut Player,) -> Re
                 return Err("No tracks specified".to_string());
             };
             let track = Track::new(path.to_string());
+            let track_name = track.display_name().to_string();
             player.play(track);
 
-            Ok(format!("Added to queue: {path}"))
+            Ok(format!("Added to queue: {track_name}"))
         }
 
         "remove" => {
@@ -25,13 +26,17 @@ pub fn handle(command: &str, argument: Option<&str>, player: &mut Player,) -> Re
 
         "list" => {
             let tracks = player.queue().tracks();
+            let current = player.queue().current_index();
             if tracks.is_empty(){
                 return Ok("Queue is empty".to_string());
             }
             let list = tracks
                 .iter()
                 .enumerate()
-                .map(|(i, track)| format!("{i}: {}", track.source))
+                .map(|(i, track)| {
+                    let marker = if Some(i) == current { "▶" } else { "" };
+                    format!("{marker} {i}: {}", track.display_name())
+                })
                 .collect::<Vec<_>>()
                 .join("\n");
             Ok(list)
