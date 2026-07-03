@@ -1,10 +1,11 @@
 use std::io::{BufRead, BufReader, Write};
 use std::os::unix::net::UnixStream;
 
-use crate::daemon::commands::{playback, queue, status, now};
+use crate::daemon::commands::{playback, queue, status, now, daemon};
 use crate::player::Player;
 
-pub fn handle(mut stream: UnixStream, player: &mut Player) {
+
+pub fn handle(mut stream: UnixStream, player: &mut Player, shutdown: &mut bool) {
     let mut reader = BufReader::new(&mut stream);
 
     let mut command = String::new();
@@ -31,6 +32,19 @@ pub fn handle(mut stream: UnixStream, player: &mut Player) {
         }
         "status" => status::status(player),
         "now" => now::now(player),
+        "daemon" => {
+            if parts.len() < 2 {
+                Err("No daemon command specified".to_string())
+            } else {
+                let daemon_parts: Vec<&str> = parts[1].splitn(2, ' ').collect();
+
+                daemon::handle(
+                    daemon_parts[0],
+                    daemon_parts.get(1).copied(),
+                    shutdown,
+                )
+            }
+        }
         _ => {
             playback::handle(
                 parts[0],

@@ -120,7 +120,7 @@ impl Player{
 
             Ok(track)
         } else {
-            self.queue.clear_current();
+            self.audio.stop();
             self.state = PlaybackState::Stopped;
 
             Err(PlayerError::EndOfQueue)

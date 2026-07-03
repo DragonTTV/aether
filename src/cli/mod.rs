@@ -1,2 +1,2 @@
 mod commands;
-pub use commands::{Cli, Command, QueueCommand};
+pub use commands::{Cli, Command, QueueCommand, DaemonCommand};

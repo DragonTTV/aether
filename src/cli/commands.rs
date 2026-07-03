@@ -52,7 +52,11 @@ pub enum Command{
     Now,
     /// Set the playback volume (0–100).
     Volume{level: u8},
-    Status
+    Status,
+    Daemon{
+        #[command(subcommand)]
+        subcommand:DaemonCommand
+    }
 }
 #[derive(Subcommand)]
 pub enum QueueCommand{
@@ -78,4 +82,12 @@ pub enum LibraryCommand{
 #[derive(Subcommand)]
 pub enum PlaylistCommand{
 //to be added
+}
+
+#[derive(Subcommand)]
+pub enum DaemonCommand {
+    Start,
+    Stop,
+    Restart,
+    Status
 }
