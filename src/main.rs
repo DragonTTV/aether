@@ -1,10 +1,12 @@
 use aether::daemon::{lifecycle, pid};
+// use aether::library::{Library};
 use clap::Parser;
-use aether::cli::{Cli, Command, QueueCommand, DaemonCommand};
+use aether::cli::{Cli, Command, QueueCommand, DaemonCommand, LibraryCommand};
 use aether::daemon::{constants::SOCKET_PATH};
 use std::io::{BufReader, Write, Read};
 use std::os::unix::net::UnixStream;
-
+// use std::path::Path;
+// use aether::library::{Library, scanner};
 
 fn send_command(command: String) -> Result<(), String> {
     let mut stream = match UnixStream::connect(SOCKET_PATH) {
@@ -40,10 +42,24 @@ fn send_command(command: String) -> Result<(), String> {
 
 fn main() {
     let cli = Cli::parse();
+    // let mut library = Library::new();
     
+    // scanner::scan(
+    //     Path::new("/home/dragon/Music"),
+    //     &mut library,
+    // ).unwrap();
+    
+    // println!("Found {} tracks", library.len());
+
+    // for track in library.tracks() {
+    //     println!("{}", track.display_name());
+    // }
+
     match cli.command {
-        Command::Play{source, now} => {
-            if now{
+        Command::Play{source, now, id} => {
+            if id{
+                send_command(format!("play_id {}", source)).unwrap();
+            }else if now{
                 send_command(format!("play_now {}", source)).unwrap();
             }else{
                 send_command(format!("play {}", source)).unwrap();
@@ -114,6 +130,18 @@ fn main() {
                 lifecycle::start_daemon().expect("Failed to start daemon.");
 
                 println!("Daemon restarted.");
+            }
+        }
+        Command::Library { subcommand } => match subcommand {
+            LibraryCommand::Scan { path } => {
+                send_command(format!("library scan {}", path)).unwrap();
+            }
+
+            LibraryCommand::List => {
+                send_command("library list".to_string()).unwrap();
+            }
+            LibraryCommand::Search { query } => {
+                send_command(format!("library search {}", query)).unwrap();
             }
         }
         _ => {

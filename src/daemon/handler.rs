@@ -1,11 +1,12 @@
 use std::io::{BufRead, BufReader, Write};
 use std::os::unix::net::UnixStream;
 
-use crate::daemon::commands::{playback, queue, status, now, daemon};
+use crate::daemon::commands::{playback, queue, status, now, daemon, library};
+use crate::library::Library;
 use crate::player::Player;
 
 
-pub fn handle(mut stream: UnixStream, player: &mut Player, shutdown: &mut bool) {
+pub fn handle(mut stream: UnixStream, player: &mut Player, library: &mut Library, shutdown: &mut bool) {
     let mut reader = BufReader::new(&mut stream);
 
     let mut command = String::new();
@@ -45,11 +46,25 @@ pub fn handle(mut stream: UnixStream, player: &mut Player, shutdown: &mut bool) 
                 )
             }
         }
+        "library" => {
+            if parts.len() < 2 {
+                Err("No library command specified".to_string())
+            } else {
+                let library_parts: Vec<&str> = parts[1].splitn(2, ' ').collect();
+
+                library::handle(
+                    library_parts[0],
+                    library_parts.get(1).copied(),
+                    library,
+                )
+            }
+        }
         _ => {
             playback::handle(
                 parts[0],
                 parts.get(1).copied(),
                 player,
+                library,
             )
         }
     };

@@ -11,12 +11,14 @@ pub struct Cli{
 pub enum Command{
     /// Play a local file or URL.
     Play{
-        
-        #[arg(short = 'n', long = "now")]
-        now:bool,
         /// File, directory or URL to play.
         source: String,
 
+        #[arg(short = 'n', long = "now")]
+        now:bool,
+        
+        #[arg(short = 'i', long = "id")]
+        id: bool,
     },
     /// Pauses the current song playing.
     Pause,
@@ -77,7 +79,13 @@ pub enum QueueCommand{
 }
 #[derive(Subcommand)]
 pub enum LibraryCommand{
-//to be added
+    Scan{
+        path: String,
+    },
+    List,
+    Search {
+        query: String,
+    },
 }
 #[derive(Subcommand)]
 pub enum PlaylistCommand{

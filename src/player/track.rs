@@ -1,11 +1,14 @@
 use std::time::Duration;
 use std::path::Path;
-#[derive(Clone)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Track {
+    pub id: u64,
     pub source: String,
     pub metadata: Metadata,
 }
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Serialize, Deserialize)]
 pub struct Metadata{
     pub title: Option<String>,
     pub artist: Option<String>,
@@ -20,6 +23,7 @@ impl Track{
         let metadata = crate::audio::metadata::extract_metadata(&source)
             .unwrap_or_default();
         Self{
+            id: 0,
             source,
             metadata,
         }

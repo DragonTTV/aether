@@ -3,3 +3,4 @@ pub mod queue;
 pub mod status;
 pub mod now;
 pub mod daemon;
+pub mod library;

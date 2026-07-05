@@ -4,12 +4,15 @@ use std::time::Duration;
 
 use aether::daemon::{handler, pid, constants::SOCKET_PATH, lifecycle};
 use aether::player::Player;
+use aether::library::{Library, storage};
 
 fn main() {
     let mut player = Player::new();
+    let mut library = storage::load()
+        .unwrap_or_else(|_| Library::new());
 
     let socket_path = SOCKET_PATH;
-
+    
     // Prevent multiple daemon instances.
     if pid::daemon_running() {
         eprintln!("Aether daemon is already running.");
@@ -30,7 +33,7 @@ fn main() {
     while !shutdown {
         let handled_command = match listener.accept() {
             Ok((stream, _)) => {
-                handler::handle(stream, &mut player, &mut shutdown);
+                handler::handle(stream, &mut player, &mut library, &mut shutdown);
                 true
             }
 
