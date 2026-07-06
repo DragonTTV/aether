@@ -1,10 +1,11 @@
 use crate::player::Track;
 use serde::{Deserialize, Serialize};
-
+use crate::cli::SortBy;
 #[derive(Default, Serialize, Deserialize)]
 pub struct Library {
     next_id: u64,
     tracks: Vec<Track>,
+    scan_paths: Vec<String>,
 }
 
 impl Library {
@@ -12,6 +13,7 @@ impl Library {
         Self {
             next_id: 1,
             tracks: Vec::new(),
+            scan_paths: Vec::new()
         }
     }
 
@@ -35,7 +37,9 @@ impl Library {
         self.tracks.is_empty()
     }
     pub fn clear(&mut self) {
-       self.tracks.clear();
+        self.tracks.clear();
+        self.next_id = 1;
+        // scan_paths stays intact
     }
     pub fn search(&self, query: &str) -> Vec<&Track>{
         let query = query.to_lowercase();
@@ -68,5 +72,43 @@ impl Library {
                 .contains(&query)
         })
         .collect()
+    }
+    pub fn sorted_tracks(&self, sort: Option<SortBy>) -> Vec<&Track>{
+        let mut tracks: Vec<&Track> = self.tracks.iter().collect();
+        match sort {
+            Some(SortBy::Title) => {
+                tracks.sort_by_key(|track| {
+                    track.display_name().to_lowercase()
+                });
+            }
+            Some(SortBy::Artist) => {
+                tracks.sort_by_key(|track| {
+                    track.metadata
+                        .artist
+                        .as_deref()
+                        .unwrap_or("")
+                        .to_lowercase()
+                });
+            }
+            Some(SortBy::Album) => {
+                tracks.sort_by_key(|track| {
+                    track.metadata
+                        .album
+                        .as_deref()
+                        .unwrap_or("")
+                        .to_lowercase()
+                });
+            }
+            None => {}
+        }
+        tracks
+    }
+    pub fn add_scan_path(&mut self, path: String) {
+        if !self.scan_paths.contains(&path) {
+            self.scan_paths.push(path);
+        }
+    }
+    pub fn scan_paths(&self) -> &[String] {
+        &self.scan_paths
     }
 }

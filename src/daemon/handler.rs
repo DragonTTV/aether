@@ -28,6 +28,7 @@ pub fn handle(mut stream: UnixStream, player: &mut Player, library: &mut Library
                     queue_parts[0],
                     queue_parts.get(1).copied(),
                     player,
+                    library
                 )
             }
         }

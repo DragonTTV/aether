@@ -1,7 +1,7 @@
 // use std::fmt::format;
 
-use crate::player::{Player, Track};
-pub fn handle(command: &str, argument: Option<&str>, player: &mut Player,) -> Result<String, String>{
+use crate::{library::Library, player::{Player, Track}};
+pub fn handle(command: &str, argument: Option<&str>, player: &mut Player, library: &mut Library) -> Result<String, String>{
     match command {
         "add" => {
             let Some(path) = argument else{
@@ -66,7 +66,24 @@ pub fn handle(command: &str, argument: Option<&str>, player: &mut Player,) -> Re
             player.clear_queue();
             Ok("Queue cleared.".to_string())
         }
+        "add_id" => {
+            let id = argument
+                .ok_or("No track ID specified.")?
+                .parse::<u64>()
+                .map_err(|_| "Invalid track ID.")?;
 
+            let track = library
+                .get(id)
+                .ok_or("Track not found.")?;
+
+            let outcome = player.play(track.clone());
+
+            if outcome.started_playing {
+                Ok(format!("Playing {}", track.display_name()))
+            } else {
+                Ok(format!("Added {} to queue", track.display_name()))
+            }
+        }
         _ => Err("Unknown queue command.".to_string()),
     }
 }

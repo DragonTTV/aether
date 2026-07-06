@@ -178,4 +178,20 @@ impl Player{
     pub fn remove_from_queue(&mut self, index: usize) -> Result<(), String> {
         self.queue.remove(index)
     }
+    pub fn play_now(&mut self, track: Track) -> PlaybackOutcome {
+        self.audio.stop();
+        self.queue.clear();
+
+        let index = self.queue.add(track);
+        self.queue.set_current(index);
+
+        let track = self.queue.current().unwrap();
+
+        self.audio.play(track);
+        self.state = PlaybackState::Playing;
+
+        PlaybackOutcome {
+            started_playing: true,
+        }
+    }
 }

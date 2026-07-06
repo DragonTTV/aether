@@ -57,13 +57,13 @@ fn main() {
 
     match cli.command {
         Command::Play{source, now, id} => {
-            if id{
-                send_command(format!("play_id {}", source)).unwrap();
-            }else if now{
-                send_command(format!("play_now {}", source)).unwrap();
-            }else{
-                send_command(format!("play {}", source)).unwrap();
-            }
+            let command = match(now, id){
+                (false, false) => format!("play {}", source),
+                (true, false) => format!("play_now {}", source),
+                (false, true) => format!("play_id {}", source),
+                (true, true) => format!("play_now_id {}", source),
+            };
+            send_command(command).unwrap();
         }
         Command::Pause=>{
             send_command("pause".to_string()).unwrap();
@@ -91,8 +91,12 @@ fn main() {
         }
         Command::Queue {subcommand}=> {
             match subcommand{
-                QueueCommand::Add {source}=> {
-                    send_command(format!("queue add {}", source)).unwrap();
+                QueueCommand::Add {source, id}=> {
+                    if id {
+                        send_command(format!("queue add_id {}", source)).unwrap();
+                    } else {
+                        send_command(format!("queue add {}", source)).unwrap();
+                    }
                 }
                 QueueCommand::Remove {index}=> {
                     send_command(format!("queue remove {}", index)).unwrap();
@@ -137,13 +141,23 @@ fn main() {
                 send_command(format!("library scan {}", path)).unwrap();
             }
 
-            LibraryCommand::List => {
-                send_command("library list".to_string()).unwrap();
+            LibraryCommand::List {sort} => {
+                if let Some(sort) = sort {
+                    send_command(format!("library list {}", sort.as_str())).unwrap();
+                } else {
+                    send_command("library list".into()).unwrap();
+                }
             }
             LibraryCommand::Search { query } => {
                 send_command(format!("library search {}", query)).unwrap();
             }
-        }
+            LibraryCommand::Info {id}=> {
+                send_command(format!("library info {}", id)).unwrap();
+            }
+            LibraryCommand::Rescan => {
+                send_command("library rescan".into()).unwrap();
+            }
+        }   
         _ => {
             println!("Not implemented yet");
         }

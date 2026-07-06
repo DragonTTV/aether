@@ -69,7 +69,13 @@ pub fn handle(command: &str, argument: Option<&str>, player: &mut Player, librar
         }
 
         "play_now" => {
-            todo!()
+            let source = argument.ok_or("No source specified.")?;
+
+            let track = Track::new(source.to_string());
+
+            player.play_now(track);
+
+            Ok("Playing immediately.".into())
         }
         "play_id" => {
             let id = argument
@@ -89,7 +95,20 @@ pub fn handle(command: &str, argument: Option<&str>, player: &mut Player, librar
                 Ok(format!("Added {} to queue", track.display_name()))
             }
         }
+        "play_now_id" => {
+            let id = argument
+                .ok_or("No track ID specified.")?
+                .parse::<u64>()
+                .map_err(|_| "Invalid track ID.")?;
 
+            let track = library
+                .get(id)
+                .ok_or("Track not found.")?;
+
+            player.play_now(track.clone());
+
+            Ok(format!("Playing {}", track.display_name()))
+        }
         _ => Err("Unknown playback command.".to_string()),
     }
 }

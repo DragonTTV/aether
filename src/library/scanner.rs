@@ -6,7 +6,11 @@ use crate:: player::Track;
 
 
 pub fn scan(path: &Path, library: &mut Library) -> Result<(), String> {
-    for entry in WalkDir::new(path) {
+    let scan_path = path.to_string_lossy().into_owned();
+    
+    library.add_scan_path(scan_path.clone());
+
+    for entry in WalkDir::new(&scan_path) {
         let entry = entry.map_err(|e| e.to_string())?;
 
         if !entry.file_type().is_file() {
