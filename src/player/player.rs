@@ -1,9 +1,13 @@
-use crate::{audio::AudioEngine, player::{PlaybackState, PlayerStatus, Queue, Track}};
-pub struct Player{
+use crate::{
+    audio::AudioEngine,
+    player::{PlaybackState, PlayerStatus, Queue, Track, RepeatMode},
+};
+pub struct Player {
     pub state: PlaybackState,
     pub queue: Queue,
     pub volume: u8,
     pub audio: AudioEngine,
+    pub repeat: RepeatMode,
 }
 #[derive(Debug)]
 pub enum PlayerError {
@@ -13,7 +17,7 @@ pub enum PlayerError {
     NothingPlaying,
     QueueEmpty,
     EndOfQueue,
-    BeginningOfQueue
+    BeginningOfQueue,
 }
 impl std::fmt::Display for PlayerError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -45,14 +49,19 @@ impl std::fmt::Display for PlayerError {
 pub struct PlaybackOutcome {
     pub started_playing: bool,
 }
-
-impl Player{
+impl Default for Player {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+impl Player {
     pub fn new() -> Self {
-        Self{
+        Self {
             state: PlaybackState::Stopped,
             queue: Queue::new(),
             volume: 50,
             audio: AudioEngine::new(),
+            repeat: RepeatMode::Off,
         }
     }
     pub fn update(&mut self) {
@@ -60,13 +69,26 @@ impl Player{
             return;
         }
         if self.audio.is_finished() {
-            let _ = self.next();
+            match self.repeat {
+                RepeatMode::Off => {
+                    let _ = self.next_track();
+                }
+                RepeatMode::Track => {
+                    let _ = self.restart_current();
+                }
+                RepeatMode::Queue => {
+                    if self.next_track().is_err() {
+                        self.queue.set_current(0);
+                        let _ = self.restart_current();
+                    }
+                }
+            }
         }
     }
-    pub fn play(&mut self, track:Track)->PlaybackOutcome{
-        let started_playing = self.state==PlaybackState::Stopped;
+    pub fn play(&mut self, track: Track) -> PlaybackOutcome {
+        let started_playing = self.state == PlaybackState::Stopped;
         let index = self.queue.add(track);
-        if started_playing{
+        if started_playing {
             self.queue.set_current(index);
             let track = self.queue.current().unwrap();
             self.audio.play(track);
@@ -74,7 +96,7 @@ impl Player{
         }
         PlaybackOutcome { started_playing }
     }
-    pub fn pause(&mut self) -> Result<(), PlayerError>{
+    pub fn pause(&mut self) -> Result<(), PlayerError> {
         match self.state {
             PlaybackState::Playing => {
                 self.audio.pause();
@@ -85,40 +107,37 @@ impl Player{
             PlaybackState::Stopped => Err(PlayerError::NothingPlaying),
         }
     }
-    pub fn resume(&mut self) -> Result<(), PlayerError>{
-        match self.state{
+    pub fn resume(&mut self) -> Result<(), PlayerError> {
+        match self.state {
             PlaybackState::Paused => {
                 self.audio.resume();
                 self.state = PlaybackState::Playing;
                 Ok(())
-            },
+            }
             PlaybackState::Playing => Err(PlayerError::AlreadyPlaying),
-            PlaybackState::Stopped => Err(PlayerError::AlreadyStopped),
+            PlaybackState::Stopped => {
+                let track = self.queue.current().ok_or(PlayerError::NothingPlaying)?;
+
+                self.audio.play(track);
+                self.state = PlaybackState::Playing;
+
+                Ok(())
+            }
         }
     }
-    pub fn stop(&mut self) -> Result<(), PlayerError>{
-        match self.state{
+    pub fn stop(&mut self) -> Result<(), PlayerError> {
+        match self.state {
             PlaybackState::Playing | PlaybackState::Paused => {
                 self.audio.stop();
                 self.state = PlaybackState::Stopped;
                 Ok(())
-            },
-            PlaybackState::Stopped => Err(PlayerError::AlreadyStopped)
+            }
+            PlaybackState::Stopped => Err(PlayerError::AlreadyStopped),
         }
     }
-    pub fn next(&mut self) -> Result<&Track, PlayerError> {
-        if self.queue.next() {
-            self.audio.stop();
-
-            let track = self
-                .queue
-                .current()
-                .ok_or(PlayerError::QueueEmpty)?;
-
-            self.audio.play(track);
-            self.state = PlaybackState::Playing;
-
-            Ok(track)
+    pub fn next_track(&mut self) -> Result<&Track, PlayerError> {
+        if self.queue.advance() {
+            self.restart_current()
         } else {
             self.audio.stop();
             self.state = PlaybackState::Stopped;
@@ -126,14 +145,11 @@ impl Player{
             Err(PlayerError::EndOfQueue)
         }
     }
-    pub fn previous(&mut self) -> Result<&Track, PlayerError> {
-        if self.queue.previous() {
+    pub fn previous_track(&mut self) -> Result<&Track, PlayerError> {
+        if self.queue.go_back() {
             self.audio.stop();
 
-            let track = self
-                .queue
-                .current()
-                .ok_or(PlayerError::QueueEmpty)?;
+            let track = self.queue.current().ok_or(PlayerError::QueueEmpty)?;
 
             self.audio.play(track);
             self.state = PlaybackState::Playing;
@@ -147,26 +163,25 @@ impl Player{
             }
         }
     }
-    pub fn set_volume(&mut self, level: u8){
+    pub fn set_volume(&mut self, level: u8) {
         let level = level.clamp(0, 100);
 
         self.audio.set_volume(level as f32 / 100.0);
         self.volume = level;
-        
     }
-    pub fn get_volume(&self) -> u8{
+    pub fn get_volume(&self) -> u8 {
         self.volume
     }
-    pub fn clear_queue(&mut self){
+    pub fn clear_queue(&mut self) {
         self.queue.clear_upcoming();
     }
-    pub fn status(&self) -> PlayerStatus{
-        PlayerStatus { 
-            state: self.state.clone(), 
-            volume: self.volume, 
-            current_track: self.current_track().cloned(), 
+    pub fn status(&self) -> PlayerStatus {
+        PlayerStatus {
+            state: self.state.clone(),
+            volume: self.volume,
+            current_track: self.current_track().cloned(),
             current_index: self.queue.current_index(),
-            queue: self.queue.tracks().to_vec(), 
+            queue: self.queue.tracks().to_vec(),
         }
     }
     pub fn queue(&self) -> &Queue {
@@ -180,10 +195,8 @@ impl Player{
     }
     pub fn play_now(&mut self, track: Track) -> PlaybackOutcome {
         self.audio.stop();
-        self.queue.clear();
 
-        let index = self.queue.add(track);
-        self.queue.set_current(index);
+        self.queue.replace_current_and_upcoming(track);
 
         let track = self.queue.current().unwrap();
 
@@ -193,5 +206,53 @@ impl Player{
         PlaybackOutcome {
             started_playing: true,
         }
+    }
+    pub fn play_all(&mut self, tracks: Vec<Track>) -> PlaybackOutcome {
+        let mut started_playing = false;
+
+        for track in tracks {
+            let outcome = self.play(track);
+
+            if outcome.started_playing {
+                started_playing = true;
+            }
+        }
+
+        PlaybackOutcome { started_playing }
+    }
+
+    pub fn play_all_now(&mut self, tracks: Vec<Track>) -> PlaybackOutcome {
+        if tracks.is_empty() {
+            return PlaybackOutcome {
+                started_playing: false,
+            };
+        }
+
+        self.audio.stop();
+        self.queue.replace_current_and_upcoming_many(tracks);
+
+        let track = self.queue.current().unwrap();
+
+        self.audio.play(track);
+        self.state = PlaybackState::Playing;
+
+        PlaybackOutcome {
+            started_playing: true,
+        }
+    }
+    pub fn set_repeat(&mut self, mode: RepeatMode) {
+        self.repeat = mode;
+    }
+
+    pub fn repeat(&self) -> RepeatMode {
+        self.repeat
+    }
+    pub fn restart_current(&mut self) -> Result<&Track, PlayerError> {
+        self.audio.stop();
+
+        let track = self.queue.current().ok_or(PlayerError::QueueEmpty)?;
+        self.audio.play(track);
+        self.state = PlaybackState::Playing;
+        Ok(track)
     }
 }

@@ -1,8 +1,8 @@
 use crate::daemon::constants::PID_FILE;
 
-pub fn write_pid() -> std::io::Result<()>{
+pub fn write_pid() -> std::io::Result<()> {
     let pid = std::process::id();
-    
+
     std::fs::write(PID_FILE, pid.to_string())
 }
 
@@ -11,13 +11,10 @@ pub fn read_pid() -> std::io::Result<u32> {
 
     pid.trim()
         .parse()
-        .map_err(|_| std::io::Error::new(
-            std::io::ErrorKind::InvalidData,
-            "Invalid PID file",
-        ))
+        .map_err(|_| std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid PID file"))
 }
 
-pub fn remove_pid() -> std::io::Result<()>{
+pub fn remove_pid() -> std::io::Result<()> {
     if std::path::Path::new(PID_FILE).exists() {
         std::fs::remove_file(PID_FILE)?;
     }

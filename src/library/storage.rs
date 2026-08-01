@@ -15,11 +15,9 @@ fn library_path() -> PathBuf {
 
 pub fn save(library: &Library) -> Result<(), String> {
     println!("Saving library...");
-    let json = serde_json::to_string_pretty(library)
-        .map_err(|e| e.to_string())?;
+    let json = serde_json::to_string_pretty(library).map_err(|e| e.to_string())?;
 
-    fs::write(library_path(), json)
-        .map_err(|e| e.to_string())
+    fs::write(library_path(), json).map_err(|e| e.to_string())
 }
 
 pub fn load() -> Result<Library, String> {
@@ -29,9 +27,19 @@ pub fn load() -> Result<Library, String> {
         return Ok(Library::new());
     }
 
-    let json = fs::read_to_string(path)
-        .map_err(|e| e.to_string())?;
+    let json = fs::read_to_string(path).map_err(|e| e.to_string())?;
 
-    serde_json::from_str(&json)
-        .map_err(|e| e.to_string())
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+
+pub fn mark_as_migrated() -> Result<(), String> {
+    let path = library_path();
+
+    if !path.exists() {
+        return Ok(());
+    }
+
+    let migrated_path = path.with_extension("json.migrated");
+
+    fs::rename(path, migrated_path).map_err(|e| e.to_string())
 }

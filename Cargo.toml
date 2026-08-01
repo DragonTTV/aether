@@ -2,7 +2,7 @@
 name = "aether"
 version = "0.1.3"
 edition = "2024"
-
+description = "A daemon-based terminal music player"
 [dependencies]
 clap = { version = "4.6.1", features = ["derive"] }
 ctrlc = "3.5.2"
@@ -12,3 +12,4 @@ rodio = "0.22.2"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.150"
 walkdir = "2.5.0"
+rusqlite = { version = "0.40.1", features = ["bundled"] }

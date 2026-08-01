@@ -1,11 +1,17 @@
 use std::path::Path;
-
-use crate::{cli::SortBy, library::{Library, scanner, storage}};
+use std::collections::{HashMap, HashSet};
+use crate::player::Track;
+use crate::{
+    cli::SortBy,
+    database::Database,
+    library::{Library, scanner},
+};
 
 pub fn handle(
     command: &str,
     argument: Option<&str>,
     library: &mut Library,
+    database: &mut Database,
 ) -> Result<String, String> {
     match command {
         "scan" => {
@@ -16,7 +22,7 @@ pub fn handle(
             library.clear();
 
             scanner::scan(Path::new(path), library)?;
-            storage::save(library)?;
+            database.save_library(library)?;
             Ok(format!("Scanned {} tracks.", library.len()))
         }
 
@@ -80,9 +86,7 @@ pub fn handle(
                 .ok_or("No track ID specified")?
                 .parse::<u64>()
                 .map_err(|_| "Invalid track ID.")?;
-            let track = library
-                .get(id)
-                .ok_or("Track not found.")?;
+            let track = library.get(id).ok_or("Track not found.")?;
             let metadata = &track.metadata;
             Ok(format!(
                 "ID: {}\n\
@@ -96,13 +100,14 @@ pub fn handle(
                 track.display_name(),
                 metadata.artist.as_deref().unwrap_or("Unknown Artist"),
                 metadata.album.as_deref().unwrap_or("Unknown Album"),
-                track.formatted_duration().unwrap_or_else(|| "Unknown".into()),
+                track
+                    .formatted_duration()
+                    .unwrap_or_else(|| "Unknown".into()),
                 metadata.release_date.as_deref().unwrap_or("Unknown"),
                 track.source,
             ))
         }
         "rescan" => {
-           let old_tracks = library.len();
             let paths = library.scan_paths().to_vec();
             let scanned_dirs = paths.len();
 
@@ -110,18 +115,30 @@ pub fn handle(
                 return Err("No scan paths found.".into());
             }
 
-            library.clear();
+            let old_tracks: HashMap<String, Track> = library
+                .tracks()
+                .iter()
+                .map(|track| (track.source.clone(), track.clone()))
+                .collect();
+            
+            let old_sources: HashSet<String> = old_tracks.keys().cloned().collect();
+
+            library.clear_tracks();
 
             for path in paths {
-                scanner::scan(Path::new(&path), library)?;
+                scanner::rescan(Path::new(&path), library, &old_tracks)?;
             }
+            let new_sources: HashSet<String> = library
+                .tracks()
+                .iter()
+                .map(|track| track.source.clone())
+                .collect();
 
-            storage::save(library)?;
+            let added = new_sources.difference(&old_sources).count();
+            let removed = old_sources.difference(&new_sources).count();
+            database.save_library(library)?;
 
             let new_tracks = library.len();
-
-            let added = new_tracks.saturating_sub(old_tracks);
-            let removed = old_tracks.saturating_sub(new_tracks);
 
             let message = if added == 0 && removed == 0 {
                 format!(
@@ -129,8 +146,7 @@ pub fn handle(
                     Directories scanned: {}\n\
                     Tracks found: {}\n\
                     No changes detected.",
-                    scanned_dirs,
-                    new_tracks
+                    scanned_dirs, new_tracks
                 )
             } else {
                 format!(
@@ -140,10 +156,76 @@ pub fn handle(
                     Changes:\n\
                     +{} added\n\
                     -{} removed",
-                    scanned_dirs,
-                    new_tracks,
-                    added,
-                    removed
+                    scanned_dirs, new_tracks, added, removed
+                )
+            };
+
+            Ok(message)
+        }
+        "rescan_reid" => {
+            let paths = library.scan_paths().to_vec();
+            let scanned_dirs = paths.len();
+
+            if paths.is_empty() {
+                return Err("No scan paths found.".into());
+            }
+
+            let old_tracks: HashMap<String, Track> = library
+                .tracks()
+                .iter()
+                .map(|track| (track.source.clone(), track.clone()))
+                .collect();
+
+            let old_sources: HashSet<String> = old_tracks.keys().cloned().collect();
+
+            library.clear();
+
+            let mut id_map = HashMap::new();
+
+            for path in paths {
+                let map = scanner::rescan_reid(
+                    Path::new(&path),
+                    library,
+                    &old_tracks,
+                )?;
+
+                id_map.extend(map);
+            }
+
+            database.update_playlist_track_ids(&id_map)?;
+
+            let new_sources: HashSet<String> = library
+                .tracks()
+                .iter()
+                .map(|track| track.source.clone())
+                .collect();
+
+            let added = new_sources.difference(&old_sources).count();
+            let removed = old_sources.difference(&new_sources).count();
+
+            database.save_library(library)?;
+
+            let new_tracks = library.len();
+
+            let message = if added == 0 && removed == 0 {
+                format!(
+                    "Library rescan complete.\n\
+                    Directories scanned: {}\n\
+                    Tracks found: {}\n\
+                    Track IDs reassigned.\n\
+                    No changes detected.",
+                    scanned_dirs, new_tracks
+                )
+            } else {
+                format!(
+                    "Library rescan complete.\n\
+                    Directories scanned: {}\n\
+                    Tracks found: {}\n\
+                    Track IDs reassigned.\n\
+                    Changes:\n\
+                    +{} added\n\
+                    -{} removed",
+                    scanned_dirs, new_tracks, added, removed
                 )
             };
 

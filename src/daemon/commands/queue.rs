@@ -1,10 +1,18 @@
 // use std::fmt::format;
 
-use crate::{library::Library, player::{Player, Track}};
-pub fn handle(command: &str, argument: Option<&str>, player: &mut Player, library: &mut Library) -> Result<String, String>{
+use crate::{
+    library::Library,
+    player::{Player, Track},
+};
+pub fn handle(
+    command: &str,
+    argument: Option<&str>,
+    player: &mut Player,
+    library: &mut Library,
+) -> Result<String, String> {
     match command {
         "add" => {
-            let Some(path) = argument else{
+            let Some(path) = argument else {
                 return Err("No tracks specified".to_string());
             };
             let track = Track::new(path.to_string());
@@ -50,13 +58,46 @@ pub fn handle(command: &str, argument: Option<&str>, player: &mut Player, librar
             output.push_str("Queue\n");
             output.push_str("-----\n\n");
 
-            for (i, track) in tracks.iter().enumerate() {
-                let marker = if Some(i) == current { "▶" } else { "" };
+            match current {
+                Some(current) => {
+                    output.push_str("History:\n");
 
-                output.push_str(&format!(
-                    "{marker} [{i}] {}\n",
-                    track.display_name()
-                ));
+                    if current == 0 {
+                        output.push_str("  None\n");
+                    } else {
+                        for (i, track) in tracks[..current].iter().enumerate() {
+                            output.push_str(&format!("  [{i}] {}\n", track.display_name()));
+                        }
+                    }
+
+                    output.push_str("\nCurrent:\n");
+                    output.push_str(&format!(
+                        "▶ [{current}] {}\n",
+                        tracks[current].display_name()
+                    ));
+
+                    output.push_str("\nUpcoming:\n");
+
+                    if current + 1 >= tracks.len() {
+                        output.push_str("  None\n");
+                    } else {
+                        for (i, track) in tracks[current + 1..].iter().enumerate() {
+                            let index = current + 1 + i;
+                            output.push_str(&format!("  [{index}] {}\n", track.display_name()));
+                        }
+                    }
+                }
+
+                None => {
+                    output.push_str("History:\n");
+
+                    for (i, track) in tracks.iter().enumerate() {
+                        output.push_str(&format!("  [{i}] {}\n", track.display_name()));
+                    }
+
+                    output.push_str("\nCurrent:\n  None\n");
+                    output.push_str("\nUpcoming:\n  None\n");
+                }
             }
 
             Ok(output)
@@ -72,9 +113,7 @@ pub fn handle(command: &str, argument: Option<&str>, player: &mut Player, librar
                 .parse::<u64>()
                 .map_err(|_| "Invalid track ID.")?;
 
-            let track = library
-                .get(id)
-                .ok_or("Track not found.")?;
+            let track = library.get(id).ok_or("Track not found.")?;
 
             let outcome = player.play(track.clone());
 

@@ -1,13 +1,12 @@
+use crate::daemon::constants::SOCKET_PATH;
+use crate::daemon::pid;
 use std::{
-    io,
+    fs, io,
     path::Path,
     process::{Command, Stdio},
     thread,
     time::Duration,
-    fs,
 };
-use crate::daemon::pid;
-use crate::daemon::constants::SOCKET_PATH;
 pub fn cleanup() {
     let _ = pid::remove_pid();
     let _ = fs::remove_file(SOCKET_PATH);
@@ -35,9 +34,7 @@ pub fn start_daemon() -> io::Result<()> {
 
     Ok(())
 }
-pub fn daemon_restart(){
-
-}
+pub fn daemon_restart() {}
 pub fn daemon_status() {
     println!("Daemon");
     println!("======\n");

@@ -1,9 +1,9 @@
 use aether::daemon::{lifecycle, pid};
 // use aether::library::{Library};
+use aether::cli::{Cli, Command, DaemonCommand, LibraryCommand, PlaylistCommand, QueueCommand, RepeatModeArg};
+use aether::daemon::constants::SOCKET_PATH;
 use clap::Parser;
-use aether::cli::{Cli, Command, QueueCommand, DaemonCommand, LibraryCommand};
-use aether::daemon::{constants::SOCKET_PATH};
-use std::io::{BufReader, Write, Read};
+use std::io::{BufReader, Read, Write};
 use std::os::unix::net::UnixStream;
 // use std::path::Path;
 // use aether::library::{Library, scanner};
@@ -13,19 +13,16 @@ fn send_command(command: String) -> Result<(), String> {
         Ok(stream) => stream,
 
         Err(_) => {
-            lifecycle::start_daemon()
-                .map_err(|e| format!("Failed to start daemon: {e}"))?;
+            lifecycle::start_daemon().map_err(|e| format!("Failed to start daemon: {e}"))?;
 
             UnixStream::connect(SOCKET_PATH)
                 .map_err(|e| format!("Failed to connect to daemon after startup: {e}"))?
         }
     };
 
-    writeln!(stream, "{command}")
-        .map_err(|e| e.to_string())?;
+    writeln!(stream, "{command}").map_err(|e| e.to_string())?;
 
-    stream.flush()
-        .map_err(|e| e.to_string())?;
+    stream.flush().map_err(|e| e.to_string())?;
 
     let mut reader = BufReader::new(stream);
     let mut response = String::new();
@@ -39,16 +36,15 @@ fn send_command(command: String) -> Result<(), String> {
     Ok(())
 }
 
-
 fn main() {
     let cli = Cli::parse();
     // let mut library = Library::new();
-    
+
     // scanner::scan(
     //     Path::new("/home/dragon/Music"),
     //     &mut library,
     // ).unwrap();
-    
+
     // println!("Found {} tracks", library.len());
 
     // for track in library.tracks() {
@@ -56,16 +52,19 @@ fn main() {
     // }
 
     match cli.command {
-        Command::Play{source, now, id} => {
-            let command = match(now, id){
-                (false, false) => format!("play {}", source),
-                (true, false) => format!("play_now {}", source),
-                (false, true) => format!("play_id {}", source),
-                (true, true) => format!("play_now_id {}", source),
+        Command::Play { source, now, id,playlist } => {
+            let command = match (now, id, playlist) {
+                (false, false, false) => format!("play {}", source),
+                (true, false, false) => format!("play_now {}", source),
+                (false, true, false) => format!("play_id {}", source),
+                (true, true, false) => format!("play_now_id {}", source),
+                (false, false, true) => format!("play_playlist {source}"),
+                (true, false, true) => format!("play_now_playlist {source}"),
+                _ => unreachable!("Clap prevents conflicting play source types")
             };
             send_command(command).unwrap();
         }
-        Command::Pause=>{
+        Command::Pause => {
             send_command("pause".to_string()).unwrap();
         }
         Command::Resume => {
@@ -74,11 +73,11 @@ fn main() {
         Command::Stop => {
             send_command("stop".to_string()).unwrap();
         }
-        Command::Volume { level} => {
+        Command::Volume { level } => {
             send_command(format!("volume {}\n", level)).unwrap();
         }
         Command::Status => {
-            send_command("status".to_string()).unwrap();        
+            send_command("status".to_string()).unwrap();
         }
         Command::Now => {
             send_command("now".into()).unwrap();
@@ -89,34 +88,32 @@ fn main() {
         Command::Prev => {
             send_command("prev \n".to_string()).unwrap();
         }
-        Command::Queue {subcommand}=> {
-            match subcommand{
-                QueueCommand::Add {source, id}=> {
-                    if id {
-                        send_command(format!("queue add_id {}", source)).unwrap();
-                    } else {
-                        send_command(format!("queue add {}", source)).unwrap();
-                    }
-                }
-                QueueCommand::Remove {index}=> {
-                    send_command(format!("queue remove {}", index)).unwrap();
-                }
-                QueueCommand::Clear => {
-                    send_command("queue clear".to_string()).unwrap();
-                }
-                QueueCommand::List => {
-                    send_command("queue list".to_string()).unwrap();
+        Command::Queue { subcommand } => match subcommand {
+            QueueCommand::Add { source, id } => {
+                if id {
+                    send_command(format!("queue add_id {}", source)).unwrap();
+                } else {
+                    send_command(format!("queue add {}", source)).unwrap();
                 }
             }
-        }
+            QueueCommand::Remove { index } => {
+                send_command(format!("queue remove {}", index)).unwrap();
+            }
+            QueueCommand::Clear => {
+                send_command("queue clear".to_string()).unwrap();
+            }
+            QueueCommand::List => {
+                send_command("queue list".to_string()).unwrap();
+            }
+        },
         Command::Daemon { subcommand } => match subcommand {
             DaemonCommand::Status => {
                 lifecycle::daemon_status();
             }
             DaemonCommand::Start => {
-                if pid::daemon_running(){
+                if pid::daemon_running() {
                     println!("Daemon is already is running.");
-                }else{
+                } else {
                     lifecycle::start_daemon().expect("Failed to start daemon.");
                     println!("Daemon Started.")
                 }
@@ -135,13 +132,13 @@ fn main() {
 
                 println!("Daemon restarted.");
             }
-        }
+        },
         Command::Library { subcommand } => match subcommand {
             LibraryCommand::Scan { path } => {
                 send_command(format!("library scan {}", path)).unwrap();
             }
 
-            LibraryCommand::List {sort} => {
+            LibraryCommand::List { sort } => {
                 if let Some(sort) = sort {
                     send_command(format!("library list {}", sort.as_str())).unwrap();
                 } else {
@@ -151,13 +148,67 @@ fn main() {
             LibraryCommand::Search { query } => {
                 send_command(format!("library search {}", query)).unwrap();
             }
-            LibraryCommand::Info {id}=> {
+            LibraryCommand::Info { id } => {
                 send_command(format!("library info {}", id)).unwrap();
             }
-            LibraryCommand::Rescan => {
-                send_command("library rescan".into()).unwrap();
+            LibraryCommand::Rescan {reid}=> {
+                if reid{
+                    send_command("library rescan_reid".into()).unwrap()
+                }
+                else{
+                    send_command("library rescan".into()).unwrap();
+                }
             }
-        }   
+        },
+        Command::Playlist { subcommand} => match subcommand {
+            PlaylistCommand::Create { name } => {
+                send_command(format!("playlist create {}", name)).unwrap();
+            }
+            PlaylistCommand::List => {
+                send_command("playlist list".to_string()).unwrap();
+            }
+            PlaylistCommand::Show { id } => {
+                send_command(format!("playlist show {}", id)).unwrap();
+            }
+            PlaylistCommand::Add {playlist_id,track_ids} => {
+                let ids = track_ids
+                    .iter()
+                    .map(u64::to_string)
+                    .collect::<Vec<_>>()
+                    .join(" ");
+                send_command(format!("playlist add {playlist_id} {ids}")).unwrap();
+            }
+            PlaylistCommand::Remove {playlist_id, position, all, missing} => {
+                if all {
+                    send_command(format!("playlist remove_all {playlist_id}")).unwrap();
+                } else if missing{
+                    send_command(format!("playlist remove_missing {playlist_id}")).unwrap();
+                } 
+                else {
+                    send_command(format!("playlist remove {playlist_id} {}", position.unwrap())).unwrap();
+                }
+            }
+            PlaylistCommand::Delete { id } => {
+                send_command(format!("playlist delete {id}")).unwrap();
+            }
+            PlaylistCommand::Rename { id, name } => {
+                send_command(format!("playlist rename {id} {name}")).unwrap();
+            }
+            PlaylistCommand::Move { playlist_id, from, to } => {
+                send_command(format!("playlist move {playlist_id} {from} {to}")).unwrap();
+            }
+            PlaylistCommand::Info { id } => {
+                send_command(format!("playlist info {id}")).unwrap();
+            }
+        },
+        Command::Repeat { mode } => {
+            match mode {
+                None => send_command("repeat".into()).unwrap(),
+                Some(RepeatModeArg::Off) => send_command("repeat off".into()).unwrap(),
+                Some(RepeatModeArg::Track) => send_command("repeat track".into()).unwrap(),
+                Some(RepeatModeArg::Queue) => send_command("repeat queue".into()).unwrap(),
+            }
+        }
         _ => {
             println!("Not implemented yet");
         }

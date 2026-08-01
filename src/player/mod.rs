@@ -1,11 +1,11 @@
 pub mod player;
 pub mod queue;
-pub mod track;
 pub mod state;
 pub mod status;
+pub mod track;
 
-pub use status::*;
 pub use player::{Player, PlayerError};
 pub use queue::Queue;
-pub use track::{Track, Metadata};
-pub use state::PlaybackState;
+pub use state::{PlaybackState, RepeatMode};
+pub use status::*;
+pub use track::{Metadata, Track};

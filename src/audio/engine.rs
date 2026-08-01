@@ -5,26 +5,33 @@ use std::io::BufReader;
 
 use rodio::{Decoder, DeviceSinkBuilder, Player};
 
-pub struct AudioEngine{
+pub struct AudioEngine {
+    #[allow(dead_code)]
     device: rodio::MixerDeviceSink,
     player: rodio::Player,
 }
 
-impl AudioEngine{
-    pub fn new() -> Self{
+impl Default for AudioEngine {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl AudioEngine {
+    pub fn new() -> Self {
         let device = DeviceSinkBuilder::open_default_sink().unwrap();
         let player = Player::connect_new(device.mixer());
-        
-        Self{device, player}
+
+        Self { device, player }
     }
     pub fn is_finished(&self) -> bool {
         self.player.empty()
-    }   
-    pub fn play(&self, track: &Track){
+    }
+    pub fn play(&self, track: &Track) {
         let file = File::open(&track.source).unwrap();
         let reader = BufReader::new(file);
         let source = Decoder::new(reader).unwrap();
-        
+
         self.player.append(source);
         self.player.play();
     }
