@@ -1,7 +1,13 @@
+
 use crate::player::Track;
+use rand::seq::SliceRandom;
+
 pub struct Queue {
     pub tracks: Vec<Track>,
     pub current_index: Option<usize>,
+    shuffle: bool,
+    shuffle_order: Vec<usize>,
+    shuffle_position: usize,
 }
 impl Default for Queue {
     fn default() -> Self {
@@ -13,6 +19,9 @@ impl Queue {
         Self {
             tracks: Vec::new(),
             current_index: None,
+            shuffle: false,
+            shuffle_order: Vec::new(),
+            shuffle_position: 0,
         }
     }
     pub fn set_current(&mut self, index: usize) {
@@ -70,29 +79,65 @@ impl Queue {
     }
 
     pub fn advance(&mut self) -> bool {
+        if self.shuffle {
+            if self.shuffle_position + 1 >= self.shuffle_order.len() {
+                self.current_index = None;
+                return false;
+            }
+
+            self.shuffle_position += 1;
+            self.current_index = Some(self.shuffle_order[self.shuffle_position]);
+
+            return true;
+        }
+
         if let Some(current) = self.current_index {
             if current == self.tracks.len() - 1 {
                 self.current_index = None;
                 return false;
             }
+
             self.current_index = Some(current + 1);
             return true;
         }
+
         false
     }
     pub fn go_back(&mut self) -> bool {
+        if self.shuffle {
+            match self.current_index {
+                Some(_) => {
+                    if self.shuffle_position == 0 {
+                        return false;
+                    }
+
+                    self.shuffle_position -= 1;
+                    self.current_index = Some(self.shuffle_order[self.shuffle_position]);
+                    return true;
+                }
+
+                None => {
+                    self.current_index = Some(self.shuffle_order[self.shuffle_position]);
+                    return true;
+                }
+            }
+        }
+
         match self.current_index {
             Some(current) => {
                 if current == 0 {
                     return false;
                 }
+
                 self.current_index = Some(current - 1);
                 true
             }
+
             None => {
                 if self.tracks.is_empty() {
                     return false;
                 }
+
                 self.current_index = Some(self.tracks.len() - 1);
                 true
             }
@@ -134,5 +179,52 @@ impl Queue {
             }
         }
     }
+    pub fn set_shuffle(&mut self, enabled: bool){
+        if self.shuffle == enabled{
+            return;
+        }
+        self.shuffle = enabled;
+        if enabled{
+            self.regenerate_shuffle(true);
+        }else{
+            self.shuffle_order.clear();
+            self.shuffle_position = 0;
+        }
+    }
 
+    pub fn shuffle(&self) -> bool { self.shuffle }
+
+    pub fn regenerate_shuffle(&mut self, keep_current: bool){
+        self.shuffle_order = (0..self.tracks.len()).collect();
+        let mut rng = rand::rng();
+        self.shuffle_order.shuffle(&mut rng);
+
+        if let Some(current) = self.current_index {
+            if let Some(pos) = self
+                .shuffle_order
+                .iter()
+                .position(|&index| index==current)
+            {
+                if keep_current{
+                    self.shuffle_order.rotate_left(pos);
+                }else{
+                    let len = self.shuffle_order.len();
+                    self.shuffle_order.rotate_left((pos + 1) % len);
+                }
+            }
+        }
+
+        self.shuffle_position = 0;
+        if !self.shuffle_order.is_empty() {
+            self.current_index = Some(self.shuffle_order[0]);
+        }
+    }
+
+    pub fn shuffle_order(&self) -> &[usize] {
+        &self.shuffle_order
+    }
+
+    pub fn shuffle_position(&self) -> usize {
+        self.shuffle_position
+    }
 }

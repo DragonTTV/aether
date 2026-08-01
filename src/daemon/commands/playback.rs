@@ -169,6 +169,48 @@ pub fn handle(
                 }
             }
         }
+        "shuffle" => {
+            match argument {
+                None => {
+                    let mut response = String::new();
+                    response.push_str(&format!("Shuffle: {}\n", if player.shuffle() { "On" } else { "Off" }));
+
+                    if player.shuffle() {
+                        response.push_str("\nPlayback Order\n\n");
+                        let current = player.queue().current_index();
+
+                        for &index in player.queue().shuffle_order() {
+                            let track = &player.queue().tracks()[index];
+
+                            if Some(index) == current {
+                                response.push_str(&format!("▶ {}\n", track.display_name()));
+                            } else {
+                                response.push_str(&format!("{}\n", track.display_name()));
+                            }
+                        }
+                    }
+                    Ok(response)
+                }
+
+                Some("on") => {
+                    player.set_shuffle(true);
+
+                    Ok(format!(
+                        "Shuffle enabled.\nOrder: {:?}\nPosition: {}",
+                        player.shuffle_order(),
+                        player.shuffle_position()
+                    ))
+                }
+
+                Some("off") => {
+                    player.set_shuffle(false);
+
+                    Ok("Shuffle disabled.".into())
+                }
+
+                Some(_) => Err("Invalid shuffle mode.".into()),
+            }
+        }
         _ => Err("Unknown playback command.".to_string()),
     }
 }

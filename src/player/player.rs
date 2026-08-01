@@ -78,7 +78,11 @@ impl Player {
                 }
                 RepeatMode::Queue => {
                     if self.next_track().is_err() {
-                        self.queue.set_current(0);
+                        if self.queue.shuffle() {
+                            self.queue.regenerate_shuffle(false);
+                        }else{
+                            self.queue.set_current(0);
+                        }
                         let _ = self.restart_current();
                     }
                 }
@@ -254,5 +258,20 @@ impl Player {
         self.audio.play(track);
         self.state = PlaybackState::Playing;
         Ok(track)
+    }
+    pub fn set_shuffle(&mut self, enabled: bool) {
+        self.queue.set_shuffle(enabled);
+    }
+
+    pub fn shuffle(&self) -> bool {
+        self.queue.shuffle()
+    }
+
+    pub fn shuffle_order(&self) -> &[usize] {
+        self.queue.shuffle_order()
+    }
+
+    pub fn shuffle_position(&self) -> usize {
+        self.queue.shuffle_position()
     }
 }

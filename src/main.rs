@@ -1,12 +1,9 @@
 use aether::daemon::{lifecycle, pid};
-// use aether::library::{Library};
-use aether::cli::{Cli, Command, DaemonCommand, LibraryCommand, PlaylistCommand, QueueCommand, RepeatModeArg};
+use aether::cli::{Cli, Command, DaemonCommand, LibraryCommand, PlaylistCommand, QueueCommand, RepeatModeArg, ShuffleModeArg};
 use aether::daemon::constants::SOCKET_PATH;
 use clap::Parser;
 use std::io::{BufReader, Read, Write};
 use std::os::unix::net::UnixStream;
-// use std::path::Path;
-// use aether::library::{Library, scanner};
 
 fn send_command(command: String) -> Result<(), String> {
     let mut stream = match UnixStream::connect(SOCKET_PATH) {
@@ -38,18 +35,6 @@ fn send_command(command: String) -> Result<(), String> {
 
 fn main() {
     let cli = Cli::parse();
-    // let mut library = Library::new();
-
-    // scanner::scan(
-    //     Path::new("/home/dragon/Music"),
-    //     &mut library,
-    // ).unwrap();
-
-    // println!("Found {} tracks", library.len());
-
-    // for track in library.tracks() {
-    //     println!("{}", track.display_name());
-    // }
 
     match cli.command {
         Command::Play { source, now, id,playlist } => {
@@ -207,6 +192,19 @@ fn main() {
                 Some(RepeatModeArg::Off) => send_command("repeat off".into()).unwrap(),
                 Some(RepeatModeArg::Track) => send_command("repeat track".into()).unwrap(),
                 Some(RepeatModeArg::Queue) => send_command("repeat queue".into()).unwrap(),
+            }
+        }
+        Command::Shuffle { enabled } => {
+            match enabled {
+                None => send_command("shuffle".into()).unwrap(),
+
+                Some(ShuffleModeArg::On) => {
+                    send_command("shuffle on".into()).unwrap()
+                }
+
+                Some(ShuffleModeArg::Off) => {
+                    send_command("shuffle off".into()).unwrap()
+                }
             }
         }
         _ => {

@@ -44,6 +44,9 @@ pub enum Command {
     Repeat {
         mode: Option<RepeatModeArg>,
     },
+    Shuffle {
+        enabled: Option<ShuffleModeArg>,
+    },
     /// Manage the playback queue.
     Queue {
         #[command(subcommand)]
@@ -230,4 +233,9 @@ pub enum RepeatModeArg {
     Off,
     Track,
     Queue,
+}
+#[derive(Debug, Clone, Copy, ValueEnum)]
+pub enum ShuffleModeArg{
+    On,
+    Off,
 }
