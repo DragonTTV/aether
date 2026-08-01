@@ -1,9 +1,26 @@
 use crate::player::Track;
-
+use std::{fmt, time::Duration};
 use std::fs::File;
-use std::io::BufReader;
+use rodio::{Decoder, DeviceSinkBuilder, Player, };
 
-use rodio::{Decoder, DeviceSinkBuilder, Player};
+#[derive(Debug)]
+pub enum AudioError {
+    SeekFailed,
+    DecoderError,
+    OutputDeviceUnavailable,
+}
+
+impl fmt::Display for AudioError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            AudioError::SeekFailed => write!(f, "Failed to seek playback."),
+            AudioError::DecoderError => write!(f, "Audio decoder error."),
+            AudioError::OutputDeviceUnavailable => {
+                write!(f, "No audio output device available.")
+            }
+        }
+    }
+}
 
 pub struct AudioEngine {
     #[allow(dead_code)]
@@ -29,11 +46,19 @@ impl AudioEngine {
     }
     pub fn play(&self, track: &Track) {
         let file = File::open(&track.source).unwrap();
-        let reader = BufReader::new(file);
-        let source = Decoder::new(reader).unwrap();
+        let len = file.metadata().unwrap().len();
+
+        let source = Decoder::builder()
+            .with_data(file)
+            .with_byte_len(len)
+            .with_seekable(true)
+            .with_gapless(true)
+            .build()
+            .unwrap();
 
         self.player.append(source);
         self.player.play();
+        
     }
     pub fn pause(&self) {
         self.player.pause();
@@ -50,5 +75,17 @@ impl AudioEngine {
 
     pub fn set_volume(&self, volume: f32) {
         self.player.set_volume(volume);
+    }
+    pub fn seek(&self, position: Duration) -> Result<(), AudioError> {
+        match self.player.try_seek(position) {
+            Ok(()) => Ok(()),
+            Err(e) => {
+                eprintln!("Seek error: {e:?}");
+                Err(AudioError::SeekFailed)
+            }
+        }
+    }
+    pub fn position(&self) -> Duration {
+        self.player.get_pos()
     }
 }

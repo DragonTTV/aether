@@ -1,5 +1,7 @@
+use std::time::Duration;
+
 use crate::{
-    audio::AudioEngine,
+    audio::{AudioEngine, AudioError},
     player::{PlaybackState, PlayerStatus, Queue, Track, RepeatMode},
 };
 pub struct Player {
@@ -18,6 +20,7 @@ pub enum PlayerError {
     QueueEmpty,
     EndOfQueue,
     BeginningOfQueue,
+    Audio(AudioError),
 }
 impl std::fmt::Display for PlayerError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -43,6 +46,7 @@ impl std::fmt::Display for PlayerError {
             PlayerError::BeginningOfQueue => {
                 write!(f, "Already at the beginning of the queue.")
             }
+            PlayerError::Audio(e) => write!(f, "{e}")
         }
     }
 }
@@ -186,6 +190,10 @@ impl Player {
             current_track: self.current_track().cloned(),
             current_index: self.queue.current_index(),
             queue: self.queue.tracks().to_vec(),
+            position: self.position(),
+            duration: self.current_track().and_then(|t| t.metadata.duration),
+            repeat: self.repeat(),
+            shuffle: self.shuffle(),
         }
     }
     pub fn queue(&self) -> &Queue {
@@ -273,5 +281,16 @@ impl Player {
 
     pub fn shuffle_position(&self) -> usize {
         self.queue.shuffle_position()
+    }
+    pub fn seek(&self, position: Duration) -> Result<(), PlayerError> {
+        if self.state == PlaybackState::Stopped{
+            return Err(PlayerError::NothingPlaying);
+        }
+        self.audio
+            .seek(position)
+            .map_err(PlayerError::Audio)
+    }
+    pub fn position(&self) -> Duration {
+        self.audio.position()
     }
 }

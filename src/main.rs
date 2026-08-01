@@ -207,6 +207,9 @@ fn main() {
                 }
             }
         }
+        Command::Seek { position } => {
+            send_command(format!("seek {}", position)).unwrap();
+        }
         _ => {
             println!("Not implemented yet");
         }

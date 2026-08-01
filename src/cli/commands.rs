@@ -76,6 +76,10 @@ pub enum Command {
         #[command(subcommand)]
         subcommand: DaemonCommand,
     },
+    Seek {
+        /// Position in seconds
+        position: u64,
+    },
 }
 #[derive(Subcommand)]
 pub enum QueueCommand {

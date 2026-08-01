@@ -1,4 +1,6 @@
-use crate::player::{PlaybackState, Track};
+use std::time::Duration;
+
+use crate::player::{PlaybackState, RepeatMode, Track};
 
 pub struct PlayerStatus {
     pub state: PlaybackState,
@@ -6,4 +8,8 @@ pub struct PlayerStatus {
     pub current_track: Option<Track>,
     pub current_index: Option<usize>,
     pub queue: Vec<Track>,
+    pub repeat: RepeatMode,
+    pub shuffle: bool,
+    pub position: Duration,
+    pub duration: Option<Duration>,
 }
