@@ -18,6 +18,7 @@ pub fn install() -> Result<(), String> {
     confirm_installation(state)?;
     create_directories()?;
     install_binaries()?;
+    configure_path()?;
     install_service()?;
     enable_service()?;
     finish();
@@ -249,6 +250,88 @@ fn create_directory(path: &Path) -> Result<(), String> {
     Ok(())
 }
 
+fn configure_path() -> Result<(), String> {
+    use std::fs::{self, OpenOptions};
+    use std::io::Write;
+
+    ui::step("Checking PATH...");
+
+    let bin_dir = platform::bin_dir();
+
+    let path = env::var("PATH").unwrap_or_default();
+
+    if path
+        .split(':')
+        .any(|p| Path::new(p) == bin_dir.as_path())
+    {
+        ui::success("PATH already configured");
+        return Ok(());
+    }
+
+    ui::warning(&format!(
+        "{} is not on your PATH.",
+        bin_dir.display()
+    ));
+
+    if !ui::confirm("Would you like Aether to configure it automatically?")? {
+        ui::warning("Skipping PATH configuration.");
+        return Ok(());
+    }
+
+    let shell = env::var("SHELL").unwrap_or_default();
+
+    let (config, line, reload) = if shell.ends_with("fish") {
+        (
+            dirs::home_dir()
+                .unwrap()
+                .join(".config/fish/config.fish"),
+            "fish_add_path ~/.local/bin",
+            "exec fish",
+        )
+    } else if shell.ends_with("bash") {
+        (
+            dirs::home_dir().unwrap().join(".bashrc"),
+            "export PATH=\"$HOME/.local/bin:$PATH\"",
+            "source ~/.bashrc",
+        )
+    } else if shell.ends_with("zsh") {
+        (
+            dirs::home_dir().unwrap().join(".zshrc"),
+            "export PATH=\"$HOME/.local/bin:$PATH\"",
+            "source ~/.zshrc",
+        )
+    } else {
+        ui::warning("Unsupported shell.");
+        ui::info("Please add the following directory to your PATH manually:");
+        ui::info(&format!("  {}", bin_dir.display()));
+        return Ok(());
+    };
+
+    if let Some(parent) = config.parent() {
+        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+
+    let existing = fs::read_to_string(&config).unwrap_or_default();
+
+    if !existing.contains(line) {
+        let mut file = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&config)
+            .map_err(|e| e.to_string())?;
+
+        writeln!(file).map_err(|e| e.to_string())?;
+        writeln!(file, "{line}").map_err(|e| e.to_string())?;
+    }
+
+    ui::success("PATH configured.");
+    ui::newline();
+    ui::info("Restart your terminal or run:");
+    ui::info(&format!("  {reload}"));
+
+    Ok(())
+}
+
 fn finish() {
     ui::newline();
 
@@ -260,4 +343,6 @@ fn finish() {
     ui::newline();
 
     ui::info("The daemon will start automatically when needed.");
+    ui::newline();
+    ui::info("If PATH was updated, restart your terminal before running Aether.");
 }
