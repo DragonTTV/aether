@@ -1,16 +1,19 @@
 
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use crate::library::Library;
+use crate::mpris::server::MprisServer;
 use crate::player::{Player, RepeatMode, Track};
 use crate::database::Database;
 
-pub fn handle(
+pub async fn handle(
     command: &str,
     argument: Option<&str>,
-    player: &mut Player,
+    player: &Arc<Mutex<Player>>,
     library: &Library,
     database: &Database,
+    mpris: &MprisServer
 ) -> Result<String, String> {
     match command {
         "play" => {
@@ -20,45 +23,104 @@ pub fn handle(
 
             let track = Track::new(path.to_string());
             let track_name = track.display_name().to_string();
-            let outcome = player.play(track);
+            let outcome = {
+                let mut player = player.lock().unwrap();
+                player.play(track)
+            };
             if outcome.started_playing {
+                println!("Before notify_metadata");
+                let _ = mpris.notify_metadata().await;
+                println!("After notify_metadata");
+                let _ = mpris.notify_playback_status().await;
+                let _ = mpris.notify_position().await;
+
                 Ok(format!("Now Playing: {track_name}"))
+
             } else {
                 Ok(format!("Added to queue: {track_name}"))
             }
         }
-        "pause" => match player.pause() {
-            Ok(()) => Ok("Playback paused".to_string()),
-            Err(e) => Ok(e.to_string()),
-        },
+        "pause" => {
+            let result = {
+                let mut player = player.lock().unwrap();
+                player.pause()
+            };
+            match result{
+                Ok(()) => {
+                    // let _ = mpris.notify_playback_status().await;
+                    Ok("Playback paused".to_string())
+                },
+                Err(e) => Ok(e.to_string()),
+            }
+        }
 
-        "resume" => match player.resume() {
-            Ok(()) => Ok("Playback resumed".to_string()),
-            Err(e) => Ok(e.to_string()),
-        },
+        "resume" => {
+            let result = {
+                let mut player = player.lock().unwrap();
+                player.resume()
+            };
+            match result {
+                Ok(()) => {
+                    // let _ = mpris.notify_playback_status().await;
+                    Ok("Playback resumed".to_string())
+                },
+                Err(e) => Ok(e.to_string()),
+            }
+        }
 
-        "stop" => match player.stop() {
-            Ok(()) => Ok("Playback stopped".to_string()),
-            Err(e) => Ok(e.to_string()),
-        },
+        "stop" => {
+            let result = {
+                let mut player = player.lock().unwrap();
+                player.stop()
+            };
+            match result {
+                Ok(()) => {
+                    // let _ = mpris.notify_playback_status().await;
+                    // let _ = mpris.notify_position().await;
+                    
+                    Ok("Playback stopped".to_string())
+                },
+                Err(e) => Ok(e.to_string()),
+            }
+        }
 
-        "next" => match player.next_track() {
-            Ok(track) => Ok(format!(
-                "Skipped to next track.\n\nNow playing: {}",
-                track.display_name()
-            )),
+        "next" => {
+            
+            let result = {
+                let mut player = player.lock().unwrap();
+                player.next_track().cloned()
+            };
+            match result {
+                Ok(track) => {
+                    // let _ = mpris.notify_metadata().await;
+                    // let _ = mpris.notify_playback_status().await;
+                    // let _ = mpris.notify_position().await;
+                    Ok(format!("Skipped to next track.\n\nNow playing: {}",track.display_name()))
+                },
+                Err(e) => Ok(e.to_string()),
+            }
+        }
+            
+        "prev" => {
+            let result = {
+                let mut player = player.lock().unwrap();
+                player.previous_track().cloned()
+            };
 
-            Err(e) => Ok(e.to_string()),
-        },
+            match result {
+                Ok(track) => {
+                    let _ = mpris.notify_metadata().await;
+                    let _ = mpris.notify_playback_status().await;
+                    let _ = mpris.notify_position().await;
 
-        "prev" => match player.previous_track() {
-            Ok(track) => Ok(format!(
-                "Returned to previous track.\n\nNow playing: {}",
-                track.display_name()
-            )),
-
-            Err(e) => Ok(e.to_string()),
-        },
+                    Ok(format!(
+                        "Returned to previous track.\n\nNow playing: {}",
+                        track.display_name()
+                    ))
+                }
+                Err(e) => Ok(e.to_string()),
+            }
+        }
 
         "volume" => {
             let Some(level) = argument else {
@@ -67,8 +129,12 @@ pub fn handle(
             let level = level
                 .parse::<u8>()
                 .map_err(|_| "Invalid volume level".to_string())?;
-            player.set_volume(level);
-            Ok(format!("Volume set to {}%", player.get_volume()))
+            let volume = {
+                let mut player = player.lock().unwrap();
+                player.set_volume(level);
+                player.get_volume()
+            };
+            Ok(format!("Volume set to {}%", volume))
         }
 
         "play_now" => {
@@ -76,10 +142,18 @@ pub fn handle(
 
             let track = Track::new(source.to_string());
 
-            player.play_now(track);
+            {
+                let mut player = player.lock().unwrap();
+                player.play_now(track);
+            } // MutexGuard dropped here
+
+            // let _ = mpris.notify_metadata().await;
+            // let _ = mpris.notify_playback_status().await;
+            // let _ = mpris.notify_position().await;
 
             Ok("Playing immediately.".into())
         }
+
         "play_id" => {
             let id = argument
                 .ok_or("No track ID specified.")?
@@ -88,9 +162,15 @@ pub fn handle(
 
             let track = library.get(id).ok_or("Track not found.")?;
 
-            let outcome = player.play(track.clone());
+            let outcome = {
+                let mut player = player.lock().unwrap();
+                player.play(track.clone())
+            };
 
             if outcome.started_playing {
+                // let _ = mpris.notify_metadata().await;
+                // let _ = mpris.notify_playback_status().await;
+                // let _ = mpris.notify_position().await;
                 Ok(format!("Playing {}", track.display_name()))
             } else {
                 Ok(format!("Added {} to queue", track.display_name()))
@@ -104,8 +184,13 @@ pub fn handle(
 
             let track = library.get(id).ok_or("Track not found.")?;
 
-            player.play_now(track.clone());
-
+            {
+                let mut player = player.lock().unwrap();
+                player.play_now(track.clone());
+            }
+            // let _ = mpris.notify_metadata().await;
+            // let _ = mpris.notify_playback_status().await;
+            // let _ = mpris.notify_position().await;
             Ok(format!("Playing {}", track.display_name()))
         }
         "play_playlist" | "play_now_playlist" => {
@@ -132,15 +217,26 @@ pub fn handle(
             let playlist_name = playlist.name;
 
             if command == "play_now_playlist" {
-                player.play_all_now(tracks);
-
+                {
+                    let mut player = player.lock().unwrap();
+                    player.play_all_now(tracks);
+                }
+                // let _ = mpris.notify_metadata().await;
+                // let _ = mpris.notify_playback_status().await;
+                // let _ = mpris.notify_position().await;
                 Ok(format!(
                     "Playing playlist '{playlist_name}' ({track_count} tracks)."
                 ))
             } else {
-                let outcome = player.play_all(tracks);
+                let outcome = {
+                    let mut player = player.lock().unwrap();
+                    player.play_all(tracks)
+                };
 
                 if outcome.started_playing {
+                    // let _ = mpris.notify_metadata().await;
+                    // let _ = mpris.notify_playback_status().await;
+                    // let _ = mpris.notify_position().await;
                     Ok(format!(
                         "Playing playlist '{playlist_name}' ({track_count} tracks)."
                     ))
@@ -153,17 +249,33 @@ pub fn handle(
         }
         "repeat" => {
             match argument {
-                None => Ok(format!("Repeat: {}", player.repeat())),
+                None => {
+                    let repeat = {
+                        let player = player.lock().unwrap();
+                        player.repeat()
+                    };
+
+                    Ok(format!("Repeat: {}", repeat))
+                }
                 Some("off") => {
-                    player.set_repeat(RepeatMode::Off);
+                    {
+                        let mut player = player.lock().unwrap();
+                        player.set_repeat(RepeatMode::Off);
+                    }
                     Ok("Repeat mode set to Off.".into())
                 }
                 Some("track") => {
-                    player.set_repeat(RepeatMode::Track);
+                    {
+                        let mut player = player.lock().unwrap();
+                        player.set_repeat(RepeatMode::Track);
+                    }
                     Ok("Repeat mode set to Track.".into())
                 }
                 Some("queue") => {
-                    player.set_repeat(RepeatMode::Queue);
+                    {
+                        let mut player = player.lock().unwrap();
+                        player.set_repeat(RepeatMode::Queue);
+                    }
                     Ok("Repeat mode set to Queue.".into())
                 }
                 Some(_) => {
@@ -173,16 +285,27 @@ pub fn handle(
         }
         "shuffle" => {
             match argument {
-                None => Ok(shuffle_status(player)),
+                None => {
+                    let guard = player.lock().unwrap();
+                    Ok(shuffle_status(&guard))
+                },
 
                 Some("on") => {
-                    player.set_shuffle(true);
-                    Ok(shuffle_status(player))
+                    {
+                        let mut player = player.lock().unwrap();
+                        player.set_shuffle(true);
+                    }
+                    let guard = player.lock().unwrap();
+                    Ok(shuffle_status(&guard))
                 }
 
                 Some("off") => {
-                    player.set_shuffle(false);
-                    Ok(shuffle_status(player))
+                    {
+                        let mut player = player.lock().unwrap();
+                        player.set_shuffle(false);
+                    };
+                    let guard = player.lock().unwrap();
+                    Ok(shuffle_status(&guard))
                 }
 
                 Some(_) => Err("Invalid shuffle mode.".into()),
@@ -194,10 +317,13 @@ pub fn handle(
                 .parse::<u64>()
                 .map_err(|_| "Invalid seek position.")?;
 
-            player
-                .seek(Duration::from_secs(seconds))
-                .map_err(|e| e.to_string())?;
-
+            {
+                let player = player.lock().unwrap();
+                player
+                    .seek(Duration::from_secs(seconds))
+                    .map_err(|e| e.to_string())?;
+            }
+            // let _ = mpris.notify_position().await;
             Ok(format!("Seeked to {}s.", seconds))
         }
         _ => Err("Unknown playback command.".to_string()),

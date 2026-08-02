@@ -6,3 +6,4 @@ pub mod logger;
 pub mod player;
 pub mod database;
 pub mod playlist;
+pub mod mpris;

@@ -1,15 +1,19 @@
 use std::fs;
 use std::os::unix::net::UnixListener;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 
 use aether::daemon::{constants::SOCKET_PATH, handler, lifecycle, pid};
 use aether::library::{Library, storage};
+use aether::mpris::server::MprisServer;
 use aether::player::Player;
 use aether::database::Database;
+use aether::player::state::UpdateEvent;
 
-fn main() {
-    let mut player = Player::new();
+#[tokio::main]
+async fn main() {
+    let player = Arc::new(Mutex::new(Player::new()));
     // let mut library = storage::load().unwrap_or_else(|_| Library::new());
 
     let mut database = Database::open().expect("Failed to open Aether database");
@@ -48,10 +52,15 @@ fn main() {
 
     println!("Aether daemon listening on {}", socket_path);
     let mut shutdown = false;
+   
+    let mpris = MprisServer::new(player.clone())
+        .await
+        .expect("Failed to start MPRIS");
+
     while !shutdown {
         let handled_command = match listener.accept() {
             Ok((stream, _)) => {
-                handler::handle(stream, &mut player, &mut library, &mut database,&mut shutdown);
+                handler::handle(stream, &player, &mut library, &mut database,&mut shutdown, &mpris).await;
                 true
             }
 
@@ -63,7 +72,15 @@ fn main() {
             }
         };
 
-        player.update();
+        match player.lock().unwrap().update(){
+            UpdateEvent::TrackChanged => {
+                // let _ = mpris.notify_metadata().await;
+                // let _ = mpris.notify_playback_status().await;
+                // let _ = mpris.notify_position().await;
+            }
+            UpdateEvent::None => {}
+            UpdateEvent::PlaybackStopped => {}
+        };
 
         if !handled_command {
             std::thread::sleep(Duration::from_millis(50));

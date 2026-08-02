@@ -1,8 +1,7 @@
 use std::time::Duration;
 
 use crate::{
-    audio::{AudioEngine, AudioError},
-    player::{PlaybackState, PlayerStatus, Queue, Track, RepeatMode},
+    audio::{AudioEngine, AudioError}, player::{PlaybackState, PlayerStatus, Queue, RepeatMode, Track, state::UpdateEvent},
 };
 pub struct Player {
     pub state: PlaybackState,
@@ -68,17 +67,19 @@ impl Player {
             repeat: RepeatMode::Off,
         }
     }
-    pub fn update(&mut self) {
+    pub fn update(&mut self) -> UpdateEvent {
         if self.state != PlaybackState::Playing {
-            return;
+            return UpdateEvent::None;
         }
         if self.audio.is_finished() {
             match self.repeat {
                 RepeatMode::Off => {
                     let _ = self.next_track();
+                    return UpdateEvent::TrackChanged;
                 }
                 RepeatMode::Track => {
                     let _ = self.restart_current();
+                    return  UpdateEvent::TrackChanged;
                 }
                 RepeatMode::Queue => {
                     if self.next_track().is_err() {
@@ -89,9 +90,11 @@ impl Player {
                         }
                         let _ = self.restart_current();
                     }
+                    return UpdateEvent::TrackChanged;
                 }
             }
         }
+        return UpdateEvent::None;
     }
     pub fn play(&mut self, track: Track) -> PlaybackOutcome {
         let started_playing = self.state == PlaybackState::Stopped;
