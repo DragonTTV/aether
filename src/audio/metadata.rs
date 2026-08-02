@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::{Path};
 use std::fs;
 use lofty::prelude::*;
 use lofty::probe::Probe;
@@ -20,8 +20,13 @@ pub fn extract_metadata(path: &str) -> Result<Metadata, String> {
     };
 
     if let Some(tag) = tagged_file.primary_tag() {
-        println!("Pictures: {}", tag.pictures().len());
-        if let Some(picture) = tag.pictures().first() {
+        let picture = tag
+            .pictures()
+            .iter()
+            .find(|p| p.pic_type() == lofty::picture::PictureType::CoverFront)
+            .or_else(|| tag.pictures().first());
+
+        if let Some(picture) = picture {
             let mut artwork_dir = dirs::data_local_dir().unwrap();
             artwork_dir.push("aether");
             artwork_dir.push("artwork");
@@ -31,20 +36,30 @@ pub fn extract_metadata(path: &str) -> Result<Metadata, String> {
 
             let mut artwork_path = artwork_dir.clone();
             let hash = Sha256::digest(path.as_bytes());
-            let filename = format!("{}.jpg", hex::encode(hash));
+            let extension = match picture.mime_type() {
+                Some(lofty::picture::MimeType::Jpeg) => "jpg",
+                Some(lofty::picture::MimeType::Png) => "png",
+                _ => "img",
+            };
+            let filename = format!("{}.{}", hex::encode(hash), extension);
 
             artwork_path.push(filename);
 
-            fs::write(&artwork_path, picture.data())
-                .map_err(|e| e.to_string())?;
-
-            println!("Saved artwork to {}", artwork_path.display());
+            if !artwork_path.exists() {
+                fs::write(&artwork_path, picture.data())
+                    .map_err(|e| e.to_string())?;
+            }
 
             metadata.artwork = Some(format!("file://{}", artwork_path.display()));
         }
         metadata.title = tag.title().map(|s| s.into_owned());
         metadata.artist = tag.artist().map(|s| s.into_owned());
         metadata.album = tag.album().map(|s| s.into_owned());
+
+        metadata.genre = tag.genre().map(|s| s.into_owned());
+
+        metadata.track_number = tag.track();
+        metadata.disc_number = tag.disk();
     }
 
     Ok(metadata)

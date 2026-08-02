@@ -1,0 +1,17 @@
+[Unit]
+Description=Aether Music Daemon
+After=graphical-session.target
+Wants=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/home/dragon/projects/aether/target/debug/aetherd
+Restart=on-failure
+RestartSec=2
+RuntimeDirectory=aether
+
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=default.target

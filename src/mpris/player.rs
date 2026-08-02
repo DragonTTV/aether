@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex};
 use zbus::interface;
 
-use crate::player::{PlaybackState, Player};
+use crate::player::{PlaybackState, Player, RepeatMode};
 use std::collections::HashMap;
 use zvariant::{ObjectPath, Value};
 pub struct PlayerInterface {
@@ -70,6 +70,38 @@ impl PlayerInterface {
                 metadata.insert(
                     "mpris:artUrl".into(),
                     Value::from(artwork.clone()),
+                );
+            }
+            if let Some(genre) = &track.metadata.genre {
+                metadata.insert(
+                    "xesam:genre".into(),
+                    Value::from(vec![genre.clone()]),
+                );
+            }
+
+            if let Some(track_number) = track.metadata.track_number {
+                metadata.insert(
+                    "xesam:trackNumber".into(),
+                    Value::from(track_number as i32),
+                );
+            }
+
+            if let Some(disc_number) = track.metadata.disc_number {
+                metadata.insert(
+                    "xesam:discNumber".into(),
+                    Value::from(disc_number as i32),
+                );
+            }
+
+            metadata.insert(
+                "xesam:url".into(),
+                Value::from(format!("file://{}", track.source)),
+            );
+
+            if let Some(date) = &track.metadata.release_date {
+                metadata.insert(
+                    "xesam:contentCreated".into(),
+                    Value::from(date.clone()),
                 );
             }
         }
@@ -195,5 +227,51 @@ impl PlayerInterface {
         let _ = player.seek(std::time::Duration::from_micros(
             position as u64,
         ));
+    }
+
+    #[zbus(property)]
+    fn loop_status(&self) -> String {
+        let player = self.player.lock().unwrap();
+
+        match player.repeat() {
+            RepeatMode::Off => "None",
+            RepeatMode::Track => "Track",
+            RepeatMode::Queue => "Playlist",
+        }
+        .to_string()
+    }
+
+    #[zbus(property)]
+    fn set_loop_status(&self, status: String) {
+        let mut player = self.player.lock().unwrap();
+
+        let mode = match status.as_str() {
+            "Track" => RepeatMode::Track,
+            "Playlist" => RepeatMode::Queue,
+            _ => RepeatMode::Off,
+        };
+
+        player.set_repeat(mode);
+    }
+
+    #[zbus(property)]
+    fn shuffle(&self) -> bool {
+        self.player.lock().unwrap().shuffle()
+    }
+
+    #[zbus(property)]
+    fn set_shuffle(&self, enabled: bool) {
+        self.player.lock().unwrap().set_shuffle(enabled);
+    }
+
+    #[zbus(property)]
+    fn volume(&self) -> f64 {
+        self.player.lock().unwrap().get_volume() as f64 / 100.0
+    }
+
+    #[zbus(property)]
+    fn set_volume(&self, volume: f64) {
+        let level = (volume * 100.0).clamp(0.0, 100.0) as u8;
+        let _ = self.player.lock().unwrap().set_volume(level);
     }
 }

@@ -174,12 +174,19 @@ impl Player {
             }
         }
     }
-    pub fn set_volume(&mut self, level: u8) {
+    pub fn set_volume(&mut self, level: u8) -> UpdateEvent {
         let level = level.clamp(0, 100);
+
+        if self.volume == level {
+            return UpdateEvent::None;
+        }
 
         self.audio.set_volume(level as f32 / 100.0);
         self.volume = level;
+
+        UpdateEvent::VolumeChanged
     }
+    
     pub fn get_volume(&self) -> u8 {
         self.volume
     }
@@ -255,8 +262,12 @@ impl Player {
             started_playing: true,
         }
     }
-    pub fn set_repeat(&mut self, mode: RepeatMode) {
+    pub fn set_repeat(&mut self, mode: RepeatMode) -> UpdateEvent {
+        if self.repeat == mode {
+            return UpdateEvent::None;
+        }
         self.repeat = mode;
+        UpdateEvent::RepeatChanged
     }
 
     pub fn repeat(&self) -> RepeatMode {
@@ -270,8 +281,14 @@ impl Player {
         self.state = PlaybackState::Playing;
         Ok(track)
     }
-    pub fn set_shuffle(&mut self, enabled: bool) {
+    pub fn set_shuffle(&mut self, enabled: bool) -> UpdateEvent {
+        if self.queue.shuffle() == enabled {
+            return UpdateEvent::None;
+        }
+
         self.queue.set_shuffle(enabled);
+
+        UpdateEvent::ShuffleChanged
     }
 
     pub fn shuffle(&self) -> bool {

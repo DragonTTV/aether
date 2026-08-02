@@ -7,3 +7,6 @@ pub mod player;
 pub mod database;
 pub mod playlist;
 pub mod mpris;
+pub mod platform;
+pub mod ipc;
+pub mod installer;

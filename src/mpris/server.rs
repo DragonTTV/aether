@@ -91,4 +91,35 @@ impl MprisServer {
         iface.can_play_changed(iface_ref.signal_emitter()).await?;
         iface.can_pause_changed(iface_ref.signal_emitter()).await
     }
+
+    pub async fn notify_loop_status(&self) -> zbus::Result<()> {
+        let iface_ref = self
+            .connection
+            .object_server()
+            .interface::<_, PlayerInterface>(MPRIS_PATH)
+            .await?;
+
+        let iface = iface_ref.get().await;
+        iface.loop_status_changed(iface_ref.signal_emitter()).await
+    }
+    pub async fn notify_shuffle_status(&self) -> zbus::Result<()> {
+        let iface_ref = self
+            .connection
+            .object_server()
+            .interface::<_, PlayerInterface>(MPRIS_PATH)
+            .await?;
+
+        let iface = iface_ref.get().await;
+        iface.shuffle_changed(iface_ref.signal_emitter()).await
+    }
+    pub async fn notify_volume_status(&self) -> zbus::Result<()> {
+        let iface_ref = self
+            .connection
+            .object_server()
+            .interface::<_, PlayerInterface>(MPRIS_PATH)
+            .await?;
+
+        let iface = iface_ref.get().await;
+        iface.volume_changed(iface_ref.signal_emitter()).await
+    }
 }

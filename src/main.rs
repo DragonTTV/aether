@@ -1,18 +1,20 @@
-use aether::daemon::{lifecycle, pid};
+use aether::daemon::{lifecycle};
 use aether::cli::{Cli, Command, DaemonCommand, LibraryCommand, PlaylistCommand, QueueCommand, RepeatModeArg, ShuffleModeArg};
-use aether::daemon::constants::SOCKET_PATH;
+use aether::ipc::path::socket_path;
+use aether::platform;
+use aether::platform::daemon::DaemonStatus;
 use clap::Parser;
 use std::io::{BufReader, Read, Write};
 use std::os::unix::net::UnixStream;
 
 fn send_command(command: String) -> Result<(), String> {
-    let mut stream = match UnixStream::connect(SOCKET_PATH) {
+    let mut stream = match UnixStream::connect(socket_path()) {
         Ok(stream) => stream,
 
         Err(_) => {
             lifecycle::start_daemon().map_err(|e| format!("Failed to start daemon: {e}"))?;
 
-            UnixStream::connect(SOCKET_PATH)
+            UnixStream::connect(socket_path())
                 .map_err(|e| format!("Failed to connect to daemon after startup: {e}"))?
         }
     };
@@ -34,6 +36,7 @@ fn send_command(command: String) -> Result<(), String> {
 }
 
 fn main() {
+    
     let cli = Cli::parse();
 
     match cli.command {
@@ -91,30 +94,26 @@ fn main() {
                 send_command("queue list".to_string()).unwrap();
             }
         },
-        Command::Daemon { subcommand } => match subcommand {
+       Command::Daemon { subcommand } => match subcommand {
             DaemonCommand::Status => {
-                lifecycle::daemon_status();
+                match platform::daemon_status().expect("Failed to query daemon status.") {
+                    DaemonStatus::Running => println!("Daemon is running."),
+                    DaemonStatus::Stopped => println!("Daemon is stopped."),
+                }
             }
+
             DaemonCommand::Start => {
-                if pid::daemon_running() {
-                    println!("Daemon is already is running.");
-                } else {
-                    lifecycle::start_daemon().expect("Failed to start daemon.");
-                    println!("Daemon Started.")
-                }
+                platform::start_daemon().expect("Failed to start daemon.");
+                println!("Daemon started.");
             }
+
             DaemonCommand::Stop => {
-                send_command("daemon stop".to_string()).unwrap();
+                platform::stop_daemon().expect("Failed to stop daemon.");
+                println!("Daemon stopped.");
             }
+
             DaemonCommand::Restart => {
-                send_command("daemon stop".to_string()).unwrap();
-
-                while pid::daemon_running() {
-                    std::thread::sleep(std::time::Duration::from_millis(50));
-                }
-
-                lifecycle::start_daemon().expect("Failed to start daemon.");
-
+                platform::restart_daemon().expect("Failed to restart daemon.");
                 println!("Daemon restarted.");
             }
         },

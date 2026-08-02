@@ -30,6 +30,9 @@ impl Database {
                     artist       TEXT,
                     duration_ms  INTEGER,
                     album        TEXT,
+                    genre        TEXT,
+                    track_number INTEGER,
+                    disc_number  INTEGER,
                     artwork      TEXT,
                     release_date TEXT
                 );
@@ -64,17 +67,20 @@ impl Database {
             .connection
             .prepare(
                 "
-                SELECT
-                    id,
-                    source,
-                    title,
-                    artist,
-                    duration_ms,
-                    album,
-                    artwork,
-                    release_date
-                FROM tracks
-                ORDER BY id
+                    SELECT
+                        id,
+                        source,
+                        title,
+                        artist,
+                        duration_ms,
+                        album,
+                        genre,
+                        track_number,
+                        disc_number,
+                        artwork,
+                        release_date
+                    FROM tracks
+                    ORDER BY id
                 ",
             )
             .map_err(|e| e.to_string())?;
@@ -89,10 +95,13 @@ impl Database {
                     metadata: Metadata {
                         title: row.get(2)?,
                         artist: row.get(3)?,
-                        duration: duration_ms.map(|ms|Duration::from_millis(ms as u64)),
+                        duration: duration_ms.map(|ms| Duration::from_millis(ms as u64)),
                         album: row.get(5)?,
-                        artwork: row.get(6)?,
-                        release_date: row.get(7)?,
+                        genre: row.get(6)?,
+                        track_number: row.get(7)?,
+                        disc_number: row.get(8)?,
+                        artwork: row.get(9)?,
+                        release_date: row.get(10)?,
                     },
                 })
             })
@@ -151,10 +160,13 @@ impl Database {
                         artist,
                         duration_ms,
                         album,
+                        genre,
+                        track_number,
+                        disc_number,
                         artwork,
                         release_date
                     )
-                    VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+                    VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
                     ",
                     params![
                         track.id as i64,
@@ -163,6 +175,9 @@ impl Database {
                         track.metadata.artist,
                         duration_ms,
                         track.metadata.album,
+                        track.metadata.genre,
+                        track.metadata.track_number,
+                        track.metadata.disc_number,
                         track.metadata.artwork,
                         track.metadata.release_date,
                     ],

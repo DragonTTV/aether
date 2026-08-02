@@ -27,5 +27,8 @@ impl fmt::Display for RepeatMode {
 pub enum UpdateEvent {
     None,
     TrackChanged,
-    PlaybackStopped
+    PlaybackStopped,
+    RepeatChanged,
+    ShuffleChanged,
+    VolumeChanged,
 }

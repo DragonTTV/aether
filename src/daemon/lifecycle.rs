@@ -1,34 +1,20 @@
-use crate::daemon::constants::SOCKET_PATH;
+use crate::{platform};
+use crate::ipc::path::socket_path;
 use crate::daemon::pid;
 use std::{
     fs, io,
     path::Path,
-    process::{Command, Stdio},
     thread,
     time::Duration,
 };
 pub fn cleanup() {
     let _ = pid::remove_pid();
-    let _ = fs::remove_file(SOCKET_PATH);
+    let _ = fs::remove_file(socket_path());
 }
 
 pub fn start_daemon() -> io::Result<()> {
-    #[cfg(debug_assertions)]
-    {
-        Command::new("cargo")
-            .args(["run", "--bin", "aetherd"])
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .spawn()?;
-    }
-
-    #[cfg(not(debug_assertions))]
-    {
-        Command::new("aetherd")
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .spawn()?;
-    }
+    platform::ensure_daemon_running()
+        .map_err(io::Error::other)?;
 
     wait_for_socket()?;
 
@@ -51,7 +37,7 @@ pub fn daemon_status() {
 
     println!(
         "Socket : {}",
-        if Path::new(SOCKET_PATH).exists() {
+        if Path::new(&socket_path()).exists() {
             "Connected"
         } else {
             "Missing"
@@ -61,7 +47,7 @@ pub fn daemon_status() {
 
 fn wait_for_socket() -> io::Result<()> {
     for _ in 0..50 {
-        if Path::new(SOCKET_PATH).exists() {
+        if Path::new(&socket_path()).exists() {
             return Ok(());
         }
 

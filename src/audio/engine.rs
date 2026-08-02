@@ -1,4 +1,5 @@
 use crate::player::Track;
+use std::num::NonZero;
 use std::{fmt, time::Duration};
 use std::fs::File;
 use rodio::{Decoder, DeviceSinkBuilder, Player, };
@@ -36,7 +37,12 @@ impl Default for AudioEngine {
 
 impl AudioEngine {
     pub fn new() -> Self {
-        let device = DeviceSinkBuilder::open_default_sink().unwrap();
+        let device = DeviceSinkBuilder::from_default_device()
+            .unwrap()
+            .with_sample_rate(NonZero::new(48000).unwrap())
+            .open_sink_or_fallback()
+            .unwrap();
+        println!("Output config: {:?}", device.config());
         let player = Player::connect_new(device.mixer());
 
         Self { device, player }
@@ -70,7 +76,7 @@ impl AudioEngine {
 
     pub fn stop(&self) {
         self.player.stop();
-        self.player.sleep_until_end();
+        // self.player.sleep_until_end();
     }
 
     pub fn set_volume(&self, volume: f32) {
