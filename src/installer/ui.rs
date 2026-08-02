@@ -29,9 +29,7 @@ pub fn info(message: &str) {
 
 pub fn confirm(prompt: &str) -> Result<bool, String> {
     print!("{prompt} [Y/n]: ");
-    io::stdout()
-        .flush()
-        .map_err(|e| e.to_string())?;
+    io::stdout().flush().map_err(|e| e.to_string())?;
 
     let mut input = String::new();
     io::stdin()

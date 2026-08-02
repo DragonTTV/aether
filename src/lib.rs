@@ -1,12 +1,12 @@
 pub mod audio;
 pub mod cli;
 pub mod daemon;
+pub mod database;
+pub mod installer;
+pub mod ipc;
 pub mod library;
 pub mod logger;
-pub mod player;
-pub mod database;
-pub mod playlist;
 pub mod mpris;
 pub mod platform;
-pub mod ipc;
-pub mod installer;
+pub mod player;
+pub mod playlist;

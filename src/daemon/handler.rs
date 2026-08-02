@@ -3,10 +3,10 @@ use std::os::unix::net::UnixStream;
 use std::sync::{Arc, Mutex};
 
 use crate::daemon::commands::{daemon, library, now, playback, playlist, queue, status};
+use crate::database::Database;
 use crate::library::Library;
 use crate::mpris::server::MprisServer;
 use crate::player::Player;
-use crate::database::Database;
 
 pub async fn handle(
     mut stream: UnixStream,
@@ -14,7 +14,7 @@ pub async fn handle(
     library: &mut Library,
     database: &mut Database,
     shutdown: &mut bool,
-    mpris: &MprisServer
+    mpris: &MprisServer,
 ) {
     let mut reader = BufReader::new(&mut stream);
 
@@ -47,11 +47,11 @@ pub async fn handle(
         "status" => {
             let player = player.lock().unwrap();
             status::status(&player)
-        },
+        }
         "now" => {
             let player = player.lock().unwrap();
             now::now(&player)
-        },
+        }
         "daemon" => {
             if parts.len() < 2 {
                 Err("No daemon command specified".to_string())
@@ -67,7 +67,12 @@ pub async fn handle(
             } else {
                 let library_parts: Vec<&str> = parts[1].splitn(2, ' ').collect();
 
-                library::handle(library_parts[0], library_parts.get(1).copied(), library, database)
+                library::handle(
+                    library_parts[0],
+                    library_parts.get(1).copied(),
+                    library,
+                    database,
+                )
             }
         }
         "playlist" => {
@@ -84,9 +89,17 @@ pub async fn handle(
                 )
             }
         }
-        _ => { 
-            playback::handle(parts[0], parts.get(1).copied(), player, library, database, mpris).await
-        },
+        _ => {
+            playback::handle(
+                parts[0],
+                parts.get(1).copied(),
+                player,
+                library,
+                database,
+                mpris,
+            )
+            .await
+        }
     };
     match response {
         Ok(messsage) => writeln!(stream, "{messsage}").unwrap(),

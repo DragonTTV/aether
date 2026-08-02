@@ -33,34 +33,33 @@ pub fn handle(
 
             Ok(output)
         }
-        
+
         "show" => {
             let id = argument
                 .ok_or("No playlist ID specified.")?
                 .parse::<u64>()
                 .map_err(|_| "Invalid playlist ID.")?;
 
-            let playlist = database
-                .get_playlist(id)?
-                .ok_or("Playlist not found.")?;
+            let playlist = database.get_playlist(id)?.ok_or("Playlist not found.")?;
 
             if playlist.track_ids.is_empty() {
-                return Ok(format!("{} [{}]\n\nPlaylist is empty.", playlist.name, playlist.id));
+                return Ok(format!(
+                    "{} [{}]\n\nPlaylist is empty.",
+                    playlist.name, playlist.id
+                ));
             }
 
             let tracks = playlist
                 .track_ids
                 .iter()
                 .enumerate()
-                .map(|(position, track_id)| {
-                    match library.get(*track_id) {
-                        Some(track) => format!(
-                            "[{position}] {} - {}",
-                            track.metadata.artist.as_deref().unwrap_or("Unknown Artist"),
-                            track.display_name()
-                        ),
-                        None => format!("[{position}] [Missing track — ID {track_id}]"),
-                    }
+                .map(|(position, track_id)| match library.get(*track_id) {
+                    Some(track) => format!(
+                        "[{position}] {} - {}",
+                        track.metadata.artist.as_deref().unwrap_or("Unknown Artist"),
+                        track.display_name()
+                    ),
+                    None => format!("[{position}] [Missing track — ID {track_id}]"),
                 })
                 .collect::<Vec<_>>()
                 .join("\n");
@@ -119,9 +118,7 @@ pub fn handle(
                 .collect();
 
             if arguments.len() != 2 {
-                return Err(
-                    "Usage: playlist remove <playlist-id> <position>".to_string()
-                );
+                return Err("Usage: playlist remove <playlist-id> <position>".to_string());
             }
 
             let playlist_id = arguments[0]
@@ -136,14 +133,15 @@ pub fn handle(
                 return Err("Playlist not found.".to_string());
             }
 
-            let removed = database
-                .remove_track_from_playlist(playlist_id, position)?;
+            let removed = database.remove_track_from_playlist(playlist_id, position)?;
 
             if !removed {
                 return Err("Playlist position not found.".to_string());
             }
 
-            Ok(format!("Removed track at position {position} from playlist."))
+            Ok(format!(
+                "Removed track at position {position} from playlist."
+            ))
         }
         "delete" => {
             let id = argument
@@ -210,10 +208,7 @@ pub fn handle(
             if database.get_playlist(playlist_id)?.is_none() {
                 return Err("Playlist not found.".to_string());
             }
-            let removed = database.remove_missing_tracks_in_playlist(
-                playlist_id,
-                library,
-            )?;
+            let removed = database.remove_missing_tracks_in_playlist(playlist_id, library)?;
             Ok(format!("Removed {removed} missing track(s)."))
         }
 
@@ -225,7 +220,7 @@ pub fn handle(
 
             if arguments.len() != 3 {
                 return Err(
-                    "Usage: playlist move <playlist-id> <from-position> <to-position>".to_string()
+                    "Usage: playlist move <playlist-id> <from-position> <to-position>".to_string(),
                 );
             }
 
@@ -255,9 +250,7 @@ pub fn handle(
                 .parse::<u64>()
                 .map_err(|_| "Invalid playlist ID.")?;
 
-            let playlist = database
-                .get_playlist(id)?
-                .ok_or("Playlist not found.")?;
+            let playlist = database.get_playlist(id)?.ok_or("Playlist not found.")?;
 
             let total = playlist.track_ids.len();
 
@@ -287,14 +280,7 @@ pub fn handle(
                 Available: {}\n\
                 Missing: {}\n\
                 Duration: {:02}:{:02}:{:02}",
-                playlist.id,
-                playlist.name,
-                total,
-                available,
-                missing,
-                hours,
-                minutes,
-                seconds,
+                playlist.id, playlist.name, total, available, missing, hours, minutes, seconds,
             ))
         }
         _ => Err("Unknown playlist command.".to_string()),

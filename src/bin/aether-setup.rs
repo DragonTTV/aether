@@ -2,11 +2,7 @@ use aether::installer;
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
-#[command(
-    name = "aether-setup",
-    version,
-    about = "Install and manage Aether"
-)]
+#[command(name = "aether-setup", version, about = "Install and manage Aether")]
 struct Cli {
     #[command(subcommand)]
     command: Commands,

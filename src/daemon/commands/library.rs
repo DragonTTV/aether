@@ -1,11 +1,11 @@
-use std::path::Path;
-use std::collections::{HashMap, HashSet};
 use crate::player::Track;
 use crate::{
     cli::SortBy,
     database::Database,
     library::{Library, scanner},
 };
+use std::collections::{HashMap, HashSet};
+use std::path::Path;
 
 pub fn handle(
     command: &str,
@@ -120,7 +120,7 @@ pub fn handle(
                 .iter()
                 .map(|track| (track.source.clone(), track.clone()))
                 .collect();
-            
+
             let old_sources: HashSet<String> = old_tracks.keys().cloned().collect();
 
             library.clear_tracks();
@@ -183,11 +183,7 @@ pub fn handle(
             let mut id_map = HashMap::new();
 
             for path in paths {
-                let map = scanner::rescan_reid(
-                    Path::new(&path),
-                    library,
-                    &old_tracks,
-                )?;
+                let map = scanner::rescan_reid(Path::new(&path), library, &old_tracks)?;
 
                 id_map.extend(map);
             }

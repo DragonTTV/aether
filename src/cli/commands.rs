@@ -142,10 +142,10 @@ pub enum LibraryCommand {
         id: u64,
     },
     /// Rescan all previously added library directories.
-    Rescan{
+    Rescan {
         /// Reassign track IDs.
         #[arg(long)]
-        reid: bool
+        reid: bool,
     },
 }
 #[derive(Subcommand)]
@@ -170,7 +170,7 @@ pub enum PlaylistCommand {
 
         /// One or more library track IDs.
         #[arg(required = true, num_args = 1..)]
-        track_ids: Vec<u64>, 
+        track_ids: Vec<u64>,
     },
     /// Remove a track from a playlist by position.
     Remove {
@@ -239,7 +239,7 @@ pub enum RepeatModeArg {
     Queue,
 }
 #[derive(Debug, Clone, Copy, ValueEnum)]
-pub enum ShuffleModeArg{
+pub enum ShuffleModeArg {
     On,
     Off,
 }

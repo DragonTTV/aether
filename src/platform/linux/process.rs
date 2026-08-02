@@ -1,4 +1,4 @@
-use libc::{sched_getscheduler, sched_param, sched_setscheduler, SCHED_OTHER};
+use libc::{SCHED_OTHER, sched_getscheduler, sched_param, sched_setscheduler};
 
 pub fn prepare_process() {
     unsafe {

@@ -36,9 +36,7 @@ impl PlayerInterface {
         if let Some(track) = player.current_track() {
             metadata.insert(
                 "mpris:trackid".into(),
-                Value::from(
-                    ObjectPath::try_from("/org/mpris/MediaPlayer2/track/0").unwrap(),
-                ),
+                Value::from(ObjectPath::try_from("/org/mpris/MediaPlayer2/track/0").unwrap()),
             );
 
             metadata.insert(
@@ -47,17 +45,11 @@ impl PlayerInterface {
             );
 
             if let Some(artist) = &track.metadata.artist {
-                metadata.insert(
-                    "xesam:artist".into(),
-                    Value::from(vec![artist.clone()]),
-                );
+                metadata.insert("xesam:artist".into(), Value::from(vec![artist.clone()]));
             }
 
             if let Some(album) = &track.metadata.album {
-                metadata.insert(
-                    "xesam:album".into(),
-                    Value::from(album.clone()),
-                );
+                metadata.insert("xesam:album".into(), Value::from(album.clone()));
             }
 
             if let Some(duration) = track.metadata.duration {
@@ -67,30 +59,18 @@ impl PlayerInterface {
                 );
             }
             if let Some(artwork) = &track.metadata.artwork {
-                metadata.insert(
-                    "mpris:artUrl".into(),
-                    Value::from(artwork.clone()),
-                );
+                metadata.insert("mpris:artUrl".into(), Value::from(artwork.clone()));
             }
             if let Some(genre) = &track.metadata.genre {
-                metadata.insert(
-                    "xesam:genre".into(),
-                    Value::from(vec![genre.clone()]),
-                );
+                metadata.insert("xesam:genre".into(), Value::from(vec![genre.clone()]));
             }
 
             if let Some(track_number) = track.metadata.track_number {
-                metadata.insert(
-                    "xesam:trackNumber".into(),
-                    Value::from(track_number as i32),
-                );
+                metadata.insert("xesam:trackNumber".into(), Value::from(track_number as i32));
             }
 
             if let Some(disc_number) = track.metadata.disc_number {
-                metadata.insert(
-                    "xesam:discNumber".into(),
-                    Value::from(disc_number as i32),
-                );
+                metadata.insert("xesam:discNumber".into(), Value::from(disc_number as i32));
             }
 
             metadata.insert(
@@ -99,16 +79,13 @@ impl PlayerInterface {
             );
 
             if let Some(date) = &track.metadata.release_date {
-                metadata.insert(
-                    "xesam:contentCreated".into(),
-                    Value::from(date.clone()),
-                );
+                metadata.insert("xesam:contentCreated".into(), Value::from(date.clone()));
             }
         }
 
         metadata
     }
-        #[zbus(property)]
+    #[zbus(property)]
     fn can_control(&self) -> bool {
         true
     }
@@ -163,7 +140,7 @@ impl PlayerInterface {
         let _ = player.previous_track();
     }
 
-    async fn pause(&self,#[zbus(signal_emitter)] emitter: zbus::object_server::SignalEmitter<'_>,) {
+    async fn pause(&self, #[zbus(signal_emitter)] emitter: zbus::object_server::SignalEmitter<'_>) {
         println!("MPRIS Pause");
 
         {
@@ -174,11 +151,11 @@ impl PlayerInterface {
         let _ = self.playback_status_changed(&emitter).await;
     }
 
-    async fn play(&self, #[zbus(signal_emitter)] emitter: zbus::object_server::SignalEmitter<'_>,) {
+    async fn play(&self, #[zbus(signal_emitter)] emitter: zbus::object_server::SignalEmitter<'_>) {
         println!("MPRIS: Play");
         {
-        let mut player = self.player.lock().unwrap();
-        let _ = player.resume();
+            let mut player = self.player.lock().unwrap();
+            let _ = player.resume();
         }
         let _ = self.playback_status_changed(&emitter).await;
     }
@@ -214,9 +191,7 @@ impl PlayerInterface {
         let current = player.position().as_micros() as i64;
         let new_position = (current + offset).max(0);
 
-        let _ = player.seek(std::time::Duration::from_micros(
-            new_position as u64,
-        ));
+        let _ = player.seek(std::time::Duration::from_micros(new_position as u64));
     }
 
     fn set_position(&self, _track_id: ObjectPath<'_>, position: i64) {
@@ -224,9 +199,7 @@ impl PlayerInterface {
 
         let position = position.max(0);
 
-        let _ = player.seek(std::time::Duration::from_micros(
-            position as u64,
-        ));
+        let _ = player.seek(std::time::Duration::from_micros(position as u64));
     }
 
     #[zbus(property)]

@@ -12,109 +12,107 @@ use daemon::DaemonStatus;
 pub fn ensure_daemon_running() -> Result<(), String> {
     #[cfg(target_os = "linux")]
     {
-        return linux::daemon::ensure_running();
+        linux::daemon::ensure_running()
     }
 
     #[cfg(target_os = "windows")]
     {
-        return windows::daemon::ensure_running();
+        windows::daemon::ensure_running()
     }
 }
 
 pub fn start_daemon() -> Result<(), String> {
     #[cfg(target_os = "linux")]
     {
-        return linux::daemon::start();
+        linux::daemon::start()
     }
 
     #[cfg(target_os = "windows")]
     {
-        return windows::daemon::start();
+        windows::daemon::start()
     }
 }
 
 pub fn stop_daemon() -> Result<(), String> {
     #[cfg(target_os = "linux")]
     {
-        return linux::daemon::stop();
+        linux::daemon::stop()
     }
 
     #[cfg(target_os = "windows")]
     {
-        return windows::daemon::stop();
+        windows::daemon::stop()
     }
 }
 
 pub fn restart_daemon() -> Result<(), String> {
     #[cfg(target_os = "linux")]
     {
-        return linux::daemon::restart();
+        linux::daemon::restart()
     }
 
     #[cfg(target_os = "windows")]
     {
-        return windows::daemon::restart();
+        windows::daemon::restart()
     }
 }
 
 pub fn daemon_status() -> Result<DaemonStatus, String> {
     #[cfg(target_os = "linux")]
     {
-        return linux::daemon::status();
+        linux::daemon::status()
     }
 
     #[cfg(target_os = "windows")]
     {
-        return windows::daemon::status();
+        windows::daemon::status()
     }
 }
-
-
 
 pub fn bin_dir() -> PathBuf {
     #[cfg(target_os = "linux")]
     {
-        return linux::bin_dir();
+        linux::bin_dir()
     }
 
     #[cfg(target_os = "windows")]
     {
-        return windows::bin_dir();
+        windows::bin_dir()
     }
 }
 
 pub fn data_dir() -> PathBuf {
     #[cfg(target_os = "linux")]
     {
-        return linux::data_dir();
+        linux::data_dir()
     }
 
     #[cfg(target_os = "windows")]
     {
-        return windows::data_dir();
+        windows::data_dir()
     }
 }
 
 pub fn artwork_dir() -> PathBuf {
     #[cfg(target_os = "linux")]
     {
-        return linux::artwork_dir();
+        linux::artwork_dir()
     }
 
     #[cfg(target_os = "windows")]
     {
-        return windows::artwork_dir();
+        windows::artwork_dir()
     }
 }
 
 pub fn service_dir() -> PathBuf {
     #[cfg(target_os = "linux")]
     {
-        return linux::service_dir();
+        linux::service_dir()
     }
 
     #[cfg(target_os = "windows")]
     {
-        return windows::service_dir();
+        windows::service_dir()
     }
 }

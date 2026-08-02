@@ -1,3 +1,4 @@
+#![allow(clippy::module_inception)]
 pub mod player;
 pub mod queue;
 pub mod state;

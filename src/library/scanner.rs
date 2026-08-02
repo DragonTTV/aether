@@ -1,8 +1,8 @@
 use super::Library;
-use crate::player::{Track};
+use crate::player::Track;
+use std::collections::HashMap;
 use std::path::Path;
 use walkdir::WalkDir;
-use std::collections::HashMap;
 
 pub fn scan(path: &Path, library: &mut Library) -> Result<(), String> {
     let scan_path = path.to_string_lossy().into_owned();
@@ -41,7 +41,11 @@ fn is_supported(path: &Path) -> bool {
     )
 }
 
-pub fn rescan(path: &Path, library: &mut Library, old_tracks: &HashMap<String, Track>,) -> Result<(), String> {
+pub fn rescan(
+    path: &Path,
+    library: &mut Library,
+    old_tracks: &HashMap<String, Track>,
+) -> Result<(), String> {
     let scan_path = path.to_string_lossy().into_owned();
 
     for entry in WalkDir::new(&scan_path) {
@@ -66,34 +70,38 @@ pub fn rescan(path: &Path, library: &mut Library, old_tracks: &HashMap<String, T
     Ok(())
 }
 
-pub fn rescan_reid(path: &Path,library: &mut Library,old_tracks: &HashMap<String, Track>,) -> Result<HashMap<u64, u64>, String>{
+pub fn rescan_reid(
+    path: &Path,
+    library: &mut Library,
+    old_tracks: &HashMap<String, Track>,
+) -> Result<HashMap<u64, u64>, String> {
     let scan_path = path.to_string_lossy().into_owned();
 
     let mut id_map = HashMap::new();
 
-    for entry in WalkDir::new(&scan_path){
-        let entry = entry.map_err(|e|e.to_string())?;
+    for entry in WalkDir::new(&scan_path) {
+        let entry = entry.map_err(|e| e.to_string())?;
 
-        if !entry.file_type().is_file(){
+        if !entry.file_type().is_file() {
             continue;
         }
 
-        if !is_supported(entry.path()){
+        if !is_supported(entry.path()) {
             continue;
         }
 
         let source = entry.path().to_string_lossy().into_owned();
 
-        if let Some(track) = old_tracks.get(&source){
+        if let Some(track) = old_tracks.get(&source) {
             let old_id = track.id;
             let mut track = track.clone();
-            track.id =0;
+            track.id = 0;
             library.add(track);
             let new_id = library.tracks().last().unwrap().id;
             id_map.insert(old_id, new_id);
-        }else{
+        } else {
             library.add(Track::new(source));
         }
     }
-    Ok(id_map)  
+    Ok(id_map)
 }

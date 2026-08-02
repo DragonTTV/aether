@@ -1,20 +1,14 @@
-use crate::{platform};
-use crate::ipc::path::socket_path;
 use crate::daemon::pid;
-use std::{
-    fs, io,
-    path::Path,
-    thread,
-    time::Duration,
-};
+use crate::ipc::path::socket_path;
+use crate::platform;
+use std::{fs, io, path::Path, thread, time::Duration};
 pub fn cleanup() {
     let _ = pid::remove_pid();
     let _ = fs::remove_file(socket_path());
 }
 
 pub fn start_daemon() -> io::Result<()> {
-    platform::ensure_daemon_running()
-        .map_err(io::Error::other)?;
+    platform::ensure_daemon_running().map_err(io::Error::other)?;
 
     wait_for_socket()?;
 

@@ -1,5 +1,8 @@
-use aether::daemon::{lifecycle};
-use aether::cli::{Cli, Command, DaemonCommand, LibraryCommand, PlaylistCommand, QueueCommand, RepeatModeArg, ShuffleModeArg};
+use aether::cli::{
+    Cli, Command, DaemonCommand, LibraryCommand, PlaylistCommand, QueueCommand, RepeatModeArg,
+    ShuffleModeArg,
+};
+use aether::daemon::lifecycle;
 use aether::ipc::path::socket_path;
 use aether::platform;
 use aether::platform::daemon::DaemonStatus;
@@ -36,11 +39,15 @@ fn send_command(command: String) -> Result<(), String> {
 }
 
 fn main() {
-    
     let cli = Cli::parse();
 
     match cli.command {
-        Command::Play { source, now, id,playlist } => {
+        Command::Play {
+            source,
+            now,
+            id,
+            playlist,
+        } => {
             let command = match (now, id, playlist) {
                 (false, false, false) => format!("play {}", source),
                 (true, false, false) => format!("play_now {}", source),
@@ -48,7 +55,7 @@ fn main() {
                 (true, true, false) => format!("play_now_id {}", source),
                 (false, false, true) => format!("play_playlist {source}"),
                 (true, false, true) => format!("play_now_playlist {source}"),
-                _ => unreachable!("Clap prevents conflicting play source types")
+                _ => unreachable!("Clap prevents conflicting play source types"),
             };
             send_command(command).unwrap();
         }
@@ -94,7 +101,7 @@ fn main() {
                 send_command("queue list".to_string()).unwrap();
             }
         },
-       Command::Daemon { subcommand } => match subcommand {
+        Command::Daemon { subcommand } => match subcommand {
             DaemonCommand::Status => {
                 match platform::daemon_status().expect("Failed to query daemon status.") {
                     DaemonStatus::Running => println!("Daemon is running."),
@@ -135,16 +142,15 @@ fn main() {
             LibraryCommand::Info { id } => {
                 send_command(format!("library info {}", id)).unwrap();
             }
-            LibraryCommand::Rescan {reid}=> {
-                if reid{
+            LibraryCommand::Rescan { reid } => {
+                if reid {
                     send_command("library rescan_reid".into()).unwrap()
-                }
-                else{
+                } else {
                     send_command("library rescan".into()).unwrap();
                 }
             }
         },
-        Command::Playlist { subcommand} => match subcommand {
+        Command::Playlist { subcommand } => match subcommand {
             PlaylistCommand::Create { name } => {
                 send_command(format!("playlist create {}", name)).unwrap();
             }
@@ -154,7 +160,10 @@ fn main() {
             PlaylistCommand::Show { id } => {
                 send_command(format!("playlist show {}", id)).unwrap();
             }
-            PlaylistCommand::Add {playlist_id,track_ids} => {
+            PlaylistCommand::Add {
+                playlist_id,
+                track_ids,
+            } => {
                 let ids = track_ids
                     .iter()
                     .map(u64::to_string)
@@ -162,14 +171,22 @@ fn main() {
                     .join(" ");
                 send_command(format!("playlist add {playlist_id} {ids}")).unwrap();
             }
-            PlaylistCommand::Remove {playlist_id, position, all, missing} => {
+            PlaylistCommand::Remove {
+                playlist_id,
+                position,
+                all,
+                missing,
+            } => {
                 if all {
                     send_command(format!("playlist remove_all {playlist_id}")).unwrap();
-                } else if missing{
+                } else if missing {
                     send_command(format!("playlist remove_missing {playlist_id}")).unwrap();
-                } 
-                else {
-                    send_command(format!("playlist remove {playlist_id} {}", position.unwrap())).unwrap();
+                } else {
+                    send_command(format!(
+                        "playlist remove {playlist_id} {}",
+                        position.unwrap()
+                    ))
+                    .unwrap();
                 }
             }
             PlaylistCommand::Delete { id } => {
@@ -178,34 +195,30 @@ fn main() {
             PlaylistCommand::Rename { id, name } => {
                 send_command(format!("playlist rename {id} {name}")).unwrap();
             }
-            PlaylistCommand::Move { playlist_id, from, to } => {
+            PlaylistCommand::Move {
+                playlist_id,
+                from,
+                to,
+            } => {
                 send_command(format!("playlist move {playlist_id} {from} {to}")).unwrap();
             }
             PlaylistCommand::Info { id } => {
                 send_command(format!("playlist info {id}")).unwrap();
             }
         },
-        Command::Repeat { mode } => {
-            match mode {
-                None => send_command("repeat".into()).unwrap(),
-                Some(RepeatModeArg::Off) => send_command("repeat off".into()).unwrap(),
-                Some(RepeatModeArg::Track) => send_command("repeat track".into()).unwrap(),
-                Some(RepeatModeArg::Queue) => send_command("repeat queue".into()).unwrap(),
-            }
-        }
-        Command::Shuffle { enabled } => {
-            match enabled {
-                None => send_command("shuffle".into()).unwrap(),
+        Command::Repeat { mode } => match mode {
+            None => send_command("repeat".into()).unwrap(),
+            Some(RepeatModeArg::Off) => send_command("repeat off".into()).unwrap(),
+            Some(RepeatModeArg::Track) => send_command("repeat track".into()).unwrap(),
+            Some(RepeatModeArg::Queue) => send_command("repeat queue".into()).unwrap(),
+        },
+        Command::Shuffle { enabled } => match enabled {
+            None => send_command("shuffle".into()).unwrap(),
 
-                Some(ShuffleModeArg::On) => {
-                    send_command("shuffle on".into()).unwrap()
-                }
+            Some(ShuffleModeArg::On) => send_command("shuffle on".into()).unwrap(),
 
-                Some(ShuffleModeArg::Off) => {
-                    send_command("shuffle off".into()).unwrap()
-                }
-            }
-        }
+            Some(ShuffleModeArg::Off) => send_command("shuffle off".into()).unwrap(),
+        },
         Command::Seek { position } => {
             send_command(format!("seek {}", position)).unwrap();
         }

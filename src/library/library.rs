@@ -26,7 +26,7 @@ impl Library {
     pub fn add_with_id(&mut self, mut track: Track, id: u64) {
         track.id = id;
         self.tracks.push(track);
-        
+
         if id >= self.next_id {
             self.next_id = id + 1;
         }
@@ -54,7 +54,7 @@ impl Library {
         // scan_paths stays intact
     }
 
-    pub fn clear_tracks(&mut self){
+    pub fn clear_tracks(&mut self) {
         self.tracks.clear();
         //remove the current track list while preserving the ID sequence and scan paths.
     }
@@ -125,5 +125,4 @@ impl Library {
     pub fn scan_paths(&self) -> &[String] {
         &self.scan_paths
     }
-    
 }

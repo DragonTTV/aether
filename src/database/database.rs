@@ -1,10 +1,10 @@
+use crate::library::Library;
+use crate::player::{Metadata, Track};
+use crate::playlist::Playlist;
 use rusqlite::{Connection, params};
 use std::collections::HashMap;
 use std::path::PathBuf;
-use crate::library::Library;
-use crate::player::{Metadata, Track};
 use std::time::Duration;
-use crate::playlist::Playlist;
 
 pub struct Database {
     connection: Connection,
@@ -14,9 +14,10 @@ impl Database {
     pub fn open() -> Result<Self, String> {
         let path = database_path()?;
 
-        let connection = Connection::open(path)
+        let connection = Connection::open(path).map_err(|e| e.to_string())?;
+        connection
+            .execute_batch("PRAGMA foreign_keys = ON;")
             .map_err(|e| e.to_string())?;
-        connection.execute_batch("PRAGMA foreign_keys = ON;").map_err(|e| e.to_string())?;
         Ok(Self { connection })
     }
     pub fn initialize(&self) -> Result<(), String> {
@@ -131,10 +132,7 @@ impl Database {
     }
 
     pub fn save_library(&mut self, library: &Library) -> Result<(), String> {
-        let transaction = self
-            .connection
-            .transaction()
-            .map_err(|e| e.to_string())?;
+        let transaction = self.connection.transaction().map_err(|e| e.to_string())?;
 
         transaction
             .execute("DELETE FROM tracks", [])
@@ -187,10 +185,7 @@ impl Database {
 
         for path in library.scan_paths() {
             transaction
-                .execute(
-                    "INSERT INTO scan_paths (path) VALUES (?1)",
-                    params![path],
-                )
+                .execute("INSERT INTO scan_paths (path) VALUES (?1)", params![path])
                 .map_err(|e| e.to_string())?;
         }
 
@@ -213,10 +208,7 @@ impl Database {
 
     pub fn create_playlist(&self, name: &str) -> Result<u64, String> {
         self.connection
-            .execute(
-                "INSERT INTO playlists (name) VALUES (?1)",
-                params![name],
-            )
+            .execute("INSERT INTO playlists (name) VALUES (?1)", params![name])
             .map_err(|e| e.to_string())?;
 
         Ok(self.connection.last_insert_rowid() as u64)
@@ -286,19 +278,22 @@ impl Database {
             .map_err(|e| e.to_string())?;
 
         for track_id in track_ids {
-            playlist.track_ids.push(track_id.map_err(|e| e.to_string())?);
+            playlist
+                .track_ids
+                .push(track_id.map_err(|e| e.to_string())?);
         }
 
         Ok(Some(playlist))
     }
 
-    pub fn add_tracks_to_playlist(&mut self, playlist_id: u64, track_ids: &[u64]) -> Result<(), String> {
-        let transaction = self
-            .connection
-            .transaction()
-            .map_err(|e| e.to_string())?;
+    pub fn add_tracks_to_playlist(
+        &mut self,
+        playlist_id: u64,
+        track_ids: &[u64],
+    ) -> Result<(), String> {
+        let transaction = self.connection.transaction().map_err(|e| e.to_string())?;
 
-        let mut next_position: i64 = transaction
+        let next_position: i64 = transaction
             .query_row(
                 "
                 SELECT COALESCE(MAX(position) + 1, 0)
@@ -310,7 +305,7 @@ impl Database {
             )
             .map_err(|e| e.to_string())?;
 
-        for track_id in track_ids {
+        for (offset, track_id) in track_ids.iter().enumerate() {
             transaction
                 .execute(
                     "
@@ -321,21 +316,24 @@ impl Database {
                     )
                     VALUES (?1, ?2, ?3)
                     ",
-                    params![playlist_id as i64, *track_id as i64, next_position],
+                    params![
+                        playlist_id as i64,
+                        *track_id as i64,
+                        next_position + offset as i64
+                    ],
                 )
                 .map_err(|e| e.to_string())?;
-
-            next_position += 1;
         }
 
         transaction.commit().map_err(|e| e.to_string())
     }
 
-    pub fn remove_track_from_playlist(&mut self, playlist_id: u64, position: usize) -> Result<bool, String> {
-        let transaction = self
-            .connection
-            .transaction()
-            .map_err(|e| e.to_string())?;
+    pub fn remove_track_from_playlist(
+        &mut self,
+        playlist_id: u64,
+        position: usize,
+    ) -> Result<bool, String> {
+        let transaction = self.connection.transaction().map_err(|e| e.to_string())?;
 
         let removed = transaction
             .execute(
@@ -370,10 +368,7 @@ impl Database {
     pub fn delete_playlist(&self, id: u64) -> Result<bool, String> {
         let deleted = self
             .connection
-            .execute(
-                "DELETE FROM playlists WHERE id = ?1",
-                params![id as i64],
-            )
+            .execute("DELETE FROM playlists WHERE id = ?1", params![id as i64])
             .map_err(|e| e.to_string())?;
 
         Ok(deleted > 0)
@@ -400,7 +395,12 @@ impl Database {
             .map_err(|e| e.to_string())
     }
 
-    pub fn move_track_in_playlist(&mut self, playlist_id: u64, from: usize, to: usize) -> Result<bool, String> {
+    pub fn move_track_in_playlist(
+        &mut self,
+        playlist_id: u64,
+        from: usize,
+        to: usize,
+    ) -> Result<bool, String> {
         let playlist = self
             .get_playlist(playlist_id)?
             .ok_or("Playlist not found.")?;
@@ -418,10 +418,7 @@ impl Database {
         let track_id = track_ids.remove(from);
         track_ids.insert(to, track_id);
 
-        let transaction = self
-            .connection
-            .transaction()
-            .map_err(|e| e.to_string())?;
+        let transaction = self.connection.transaction().map_err(|e| e.to_string())?;
 
         transaction
             .execute(
@@ -441,11 +438,7 @@ impl Database {
                     )
                     VALUES (?1, ?2, ?3)
                     ",
-                    params![
-                        playlist_id as i64,
-                        *track_id as i64,
-                        position as i64
-                    ],
+                    params![playlist_id as i64, *track_id as i64, position as i64],
                 )
                 .map_err(|e| e.to_string())?;
         }
@@ -454,7 +447,11 @@ impl Database {
 
         Ok(true)
     }
-    pub fn remove_missing_tracks_in_playlist(&mut self, playlist_id: u64, library: &Library) -> Result<usize, String>{
+    pub fn remove_missing_tracks_in_playlist(
+        &mut self,
+        playlist_id: u64,
+        library: &Library,
+    ) -> Result<usize, String> {
         let playlist = self
             .get_playlist(playlist_id)?
             .ok_or("Playlist not found")?;
@@ -465,17 +462,14 @@ impl Database {
             .filter(|id| library.get(*id).is_some())
             .collect();
         let removed = origianl_length - track_ids.len();
-        let transaction = self
-            .connection
-            .transaction()
-            .map_err(|e| e.to_string())?;
+        let transaction = self.connection.transaction().map_err(|e| e.to_string())?;
         transaction
             .execute(
-                "DELETE FROM playlist_tracks WHERE playlist_id = ?1", 
+                "DELETE FROM playlist_tracks WHERE playlist_id = ?1",
                 params![playlist_id as i64],
             )
             .map_err(|e| e.to_string())?;
-        for (position, track_id) in track_ids.iter().enumerate(){
+        for (position, track_id) in track_ids.iter().enumerate() {
             transaction
                 .execute(
                     "
@@ -486,7 +480,7 @@ impl Database {
                     )
                     VALUES(?1, ?2, ?3)
                     ",
-                    params![playlist_id as i64, *track_id as i64, position as i64],    
+                    params![playlist_id as i64, *track_id as i64, position as i64],
                 )
                 .map_err(|e| e.to_string())?;
         }
@@ -494,63 +488,60 @@ impl Database {
         Ok(removed)
     }
 
-    pub fn get_playlists(&self) -> Result<Vec<Playlist>, String>{
+    pub fn get_playlists(&self) -> Result<Vec<Playlist>, String> {
         let mut statment = self
             .connection
             .prepare("SELECT id FROM playlists ORDER BY id")
             .map_err(|e| e.to_string())?;
         let ids = statment
-            .query_map([], |row|row.get::<_, i64>(0))
+            .query_map([], |row| row.get::<_, i64>(0))
             .map_err(|e| e.to_string())?;
 
         let mut playlists = Vec::new();
-        for id in ids{
-            let id = id.map_err(|e|e.to_string())? as u64;
+        for id in ids {
+            let id = id.map_err(|e| e.to_string())? as u64;
             if let Some(playlist) = self.get_playlist(id)? {
                 playlists.push(playlist)
             }
-
         }
         Ok(playlists)
-    } 
+    }
 
-    pub fn update_playlist_track_ids(&mut self, id_map: &HashMap<u64, u64>,) -> Result<(), String>{
+    pub fn update_playlist_track_ids(&mut self, id_map: &HashMap<u64, u64>) -> Result<(), String> {
         let playlists = self.get_playlists()?;
-        let transaction = self.connection.transaction().map_err(|e|e.to_string())?;
+        let transaction = self.connection.transaction().map_err(|e| e.to_string())?;
 
-        for playlist in playlists{
+        for playlist in playlists {
             transaction
                 .execute(
                     "DELETE FROM playlist_tracks WHERE playlist_id = ?",
-                    [playlist.id as i64]
+                    [playlist.id as i64],
                 )
-                .map_err(|e|e.to_string())?;
-            for(position, track_id) in playlist.track_ids.iter().enumerate(){
+                .map_err(|e| e.to_string())?;
+            for (position, track_id) in playlist.track_ids.iter().enumerate() {
                 let new_id = *id_map.get(track_id).unwrap_or(track_id);
 
                 transaction
                     .execute(
                         "INSERT INTO playlist_tracks (playlist_id, track_id, position)
                             VALUES (?, ?, ?)",
-                        (playlist.id as i64, new_id as i64, position as i64))
-                    .map_err(|e|e.to_string())?;
+                        (playlist.id as i64, new_id as i64, position as i64),
+                    )
+                    .map_err(|e| e.to_string())?;
             }
         }
 
-        transaction.commit().map_err(|e|e.to_string())?;
+        transaction.commit().map_err(|e| e.to_string())?;
         Ok(())
     }
-
 }
 
 fn database_path() -> Result<PathBuf, String> {
-    let mut path = dirs::data_local_dir()
-        .ok_or("Could not determine local data directory.")?;
+    let mut path = dirs::data_local_dir().ok_or("Could not determine local data directory.")?;
 
     path.push("aether");
 
-    std::fs::create_dir_all(&path)
-        .map_err(|e| e.to_string())?;
+    std::fs::create_dir_all(&path).map_err(|e| e.to_string())?;
 
     path.push("aether.db");
 

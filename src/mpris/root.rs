@@ -2,8 +2,6 @@ use zbus::interface;
 
 pub struct RootInterface;
 
-
-
 #[interface(name = "org.mpris.MediaPlayer2")]
 impl RootInterface {
     fn raise(&self) {}
@@ -37,11 +35,6 @@ impl RootInterface {
 
     #[zbus(property)]
     fn supported_mime_types(&self) -> Vec<&str> {
-        vec![
-            "audio/mpeg",
-            "audio/flac",
-            "audio/ogg",
-            "audio/wav",
-        ]
+        vec!["audio/mpeg", "audio/flac", "audio/ogg", "audio/wav"]
     }
 }

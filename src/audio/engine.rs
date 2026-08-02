@@ -1,8 +1,8 @@
 use crate::player::Track;
+use rodio::{Decoder, DeviceSinkBuilder, Player};
+use std::fs::File;
 use std::num::NonZero;
 use std::{fmt, time::Duration};
-use std::fs::File;
-use rodio::{Decoder, DeviceSinkBuilder, Player, };
 
 #[derive(Debug)]
 pub enum AudioError {
@@ -64,7 +64,6 @@ impl AudioEngine {
 
         self.player.append(source);
         self.player.play();
-        
     }
     pub fn pause(&self) {
         self.player.pause();

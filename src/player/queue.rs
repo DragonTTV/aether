@@ -1,4 +1,3 @@
-
 use crate::player::Track;
 use rand::seq::SliceRandom;
 
@@ -179,38 +178,39 @@ impl Queue {
             }
         }
     }
-    pub fn set_shuffle(&mut self, enabled: bool){
-        if self.shuffle == enabled{
+    pub fn set_shuffle(&mut self, enabled: bool) {
+        if self.shuffle == enabled {
             return;
         }
         self.shuffle = enabled;
-        if enabled{
+        if enabled {
             self.regenerate_shuffle(true);
-        }else{
+        } else {
             self.shuffle_order.clear();
             self.shuffle_position = 0;
         }
     }
 
-    pub fn shuffle(&self) -> bool { self.shuffle }
+    pub fn shuffle(&self) -> bool {
+        self.shuffle
+    }
 
-    pub fn regenerate_shuffle(&mut self, keep_current: bool){
+    pub fn regenerate_shuffle(&mut self, keep_current: bool) {
         self.shuffle_order = (0..self.tracks.len()).collect();
         let mut rng = rand::rng();
         self.shuffle_order.shuffle(&mut rng);
 
-        if let Some(current) = self.current_index {
-            if let Some(pos) = self
+        if let Some(current) = self.current_index
+            && let Some(pos) = self
                 .shuffle_order
                 .iter()
-                .position(|&index| index==current)
-            {
-                if keep_current{
-                    self.shuffle_order.rotate_left(pos);
-                }else{
-                    let len = self.shuffle_order.len();
-                    self.shuffle_order.rotate_left((pos + 1) % len);
-                }
+                .position(|&index| index == current)
+        {
+            if keep_current {
+                self.shuffle_order.rotate_left(pos);
+            } else {
+                let len = self.shuffle_order.len();
+                self.shuffle_order.rotate_left((pos + 1) % len);
             }
         }
 

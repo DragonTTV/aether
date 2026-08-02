@@ -1,2 +1,5 @@
 mod commands;
-pub use commands::{Cli, Command, DaemonCommand, LibraryCommand, QueueCommand, PlaylistCommand, SortBy, RepeatModeArg, ShuffleModeArg};
+pub use commands::{
+    Cli, Command, DaemonCommand, LibraryCommand, PlaylistCommand, QueueCommand, RepeatModeArg,
+    ShuffleModeArg, SortBy,
+};

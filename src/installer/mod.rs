@@ -9,20 +9,20 @@ pub mod ui;
 pub fn install() -> Result<(), String> {
     #[cfg(target_os = "linux")]
     {
-        return linux::install();
+        linux::install()
     }
 
     #[cfg(target_os = "windows")]
     {
-        return windows::install();
+        windows::install()
     }
 }
 
-pub fn uninstall() -> Result<(), String>{
+pub fn uninstall() -> Result<(), String> {
     Ok(())
 }
 
-pub fn doctor() -> Result<(), String>{
+pub fn doctor() -> Result<(), String> {
     Ok(())
 }
 
@@ -31,4 +31,3 @@ pub enum InstallState {
     Install,
     Reinstall,
 }
-

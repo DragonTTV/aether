@@ -1,7 +1,8 @@
 use std::time::Duration;
 
 use crate::{
-    audio::{AudioEngine, AudioError}, player::{PlaybackState, PlayerStatus, Queue, RepeatMode, Track, state::UpdateEvent},
+    audio::{AudioEngine, AudioError},
+    player::{PlaybackState, PlayerStatus, Queue, RepeatMode, Track, state::UpdateEvent},
 };
 pub struct Player {
     pub state: PlaybackState,
@@ -45,7 +46,7 @@ impl std::fmt::Display for PlayerError {
             PlayerError::BeginningOfQueue => {
                 write!(f, "Already at the beginning of the queue.")
             }
-            PlayerError::Audio(e) => write!(f, "{e}")
+            PlayerError::Audio(e) => write!(f, "{e}"),
         }
     }
 }
@@ -79,13 +80,13 @@ impl Player {
                 }
                 RepeatMode::Track => {
                     let _ = self.restart_current();
-                    return  UpdateEvent::TrackChanged;
+                    return UpdateEvent::TrackChanged;
                 }
                 RepeatMode::Queue => {
                     if self.next_track().is_err() {
                         if self.queue.shuffle() {
                             self.queue.regenerate_shuffle(false);
-                        }else{
+                        } else {
                             self.queue.set_current(0);
                         }
                         let _ = self.restart_current();
@@ -94,7 +95,7 @@ impl Player {
                 }
             }
         }
-        return UpdateEvent::None;
+        UpdateEvent::None
     }
     pub fn play(&mut self, track: Track) -> PlaybackOutcome {
         let started_playing = self.state == PlaybackState::Stopped;
@@ -186,7 +187,7 @@ impl Player {
 
         UpdateEvent::VolumeChanged
     }
-    
+
     pub fn get_volume(&self) -> u8 {
         self.volume
     }
@@ -303,12 +304,10 @@ impl Player {
         self.queue.shuffle_position()
     }
     pub fn seek(&self, position: Duration) -> Result<(), PlayerError> {
-        if self.state == PlaybackState::Stopped{
+        if self.state == PlaybackState::Stopped {
             return Err(PlayerError::NothingPlaying);
         }
-        self.audio
-            .seek(position)
-            .map_err(PlayerError::Audio)
+        self.audio.seek(position).map_err(PlayerError::Audio)
     }
     pub fn position(&self) -> Duration {
         self.audio.position()

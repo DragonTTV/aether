@@ -1,12 +1,14 @@
 use std::env;
 use std::path::Path;
-use std::{fs, path::PathBuf};
 use std::process::Command;
+use std::{fs, path::PathBuf};
 
-use crate::{installer::{InstallState, ui}, platform};
+use crate::{
+    installer::{InstallState, ui},
+    platform,
+};
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
-
 
 pub fn install() -> Result<(), String> {
     ui::header();
@@ -31,7 +33,6 @@ fn check_environment() -> Result<(), String> {
     ui::success("Environment OK");
 
     Ok(())
-
 }
 
 fn check_systemd() -> Result<(), String> {
@@ -45,11 +46,9 @@ fn check_systemd() -> Result<(), String> {
         })?;
 
     if !output.status.success() {
-        return Err(
-            "Aether currently requires systemd.\n\
+        return Err("Aether currently requires systemd.\n\
              Support for non-systemd init systems may be added in the future."
-                .into(),
-        );
+            .into());
     }
 
     ui::success("systemd detected");
@@ -61,16 +60,10 @@ fn check_user_systemd() -> Result<(), String> {
     let output = Command::new("systemctl")
         .args(["--user", "show-environment"])
         .output()
-        .map_err(|_| {
-            "Unable to communicate with the systemd user manager."
-                .to_string()
-        })?;
+        .map_err(|_| "Unable to communicate with the systemd user manager.".to_string())?;
 
     if !output.status.success() {
-        return Err(
-            "Unable to communicate with the systemd user manager."
-                .into(),
-        );
+        return Err("Unable to communicate with the systemd user manager.".into());
     }
 
     ui::success("systemd user services available");
@@ -104,8 +97,9 @@ fn confirm_installation(state: InstallState) -> Result<(), String> {
     }
 
     ui::info(&format!(
-    "Target            : {}",
-    platform::data_dir().display()));
+        "Target            : {}",
+        platform::data_dir().display()
+    ));
 
     ui::newline();
 
@@ -132,11 +126,7 @@ fn create_directories() -> Result<(), String> {
     Ok(())
 }
 
-const BINARIES: &[&str] = &[
-    "aether",
-    "aetherd",
-    "aether-setup",
-];
+const BINARIES: &[&str] = &["aether", "aetherd", "aether-setup"];
 
 fn install_binaries() -> Result<(), String> {
     ui::step("Installing binaries...");
@@ -151,8 +141,8 @@ fn install_binaries() -> Result<(), String> {
 }
 
 fn installer_directory() -> Result<PathBuf, String> {
-    let exe = env::current_exe()
-        .map_err(|e| format!("Failed to determine installer location: {e}"))?;
+    let exe =
+        env::current_exe().map_err(|e| format!("Failed to determine installer location: {e}"))?;
 
     exe.parent()
         .map(PathBuf::from)
@@ -176,18 +166,13 @@ fn install_binary(installer_dir: &Path, binary: &str) -> Result<(), String> {
     Ok(())
 }
 
-
-
 #[cfg(unix)]
 fn set_executable(path: &Path) -> Result<(), String> {
-    let mut permissions = fs::metadata(path)
-        .map_err(|e| e.to_string())?
-        .permissions();
+    let mut permissions = fs::metadata(path).map_err(|e| e.to_string())?.permissions();
 
     permissions.set_mode(0o755);
 
-    fs::set_permissions(path, permissions)
-        .map_err(|e| e.to_string())?;
+    fs::set_permissions(path, permissions).map_err(|e| e.to_string())?;
 
     Ok(())
 }
@@ -255,7 +240,6 @@ fn enable_service() -> Result<(), String> {
 
     Ok(())
 }
-
 
 fn create_directory(path: &Path) -> Result<(), String> {
     fs::create_dir_all(path).map_err(|e| e.to_string())?;

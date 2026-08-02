@@ -1,11 +1,10 @@
 use std::sync::{Arc, Mutex};
 
-use zbus::{connection::Builder, Connection};
+use zbus::{Connection, connection::Builder};
 
 use crate::{
-    mpris::{
-        player::PlayerInterface, root::RootInterface,
-    }, player::Player,
+    mpris::{player::PlayerInterface, root::RootInterface},
+    player::Player,
 };
 
 pub struct MprisServer {
@@ -19,14 +18,8 @@ impl MprisServer {
         let connection = Arc::new(
             Builder::session()?
                 .name("org.mpris.MediaPlayer2.aether")?
-                .serve_at(
-                    MPRIS_PATH,
-                    RootInterface,
-                )?
-                .serve_at(
-                    MPRIS_PATH,
-                    PlayerInterface::new(player),
-                )?
+                .serve_at(MPRIS_PATH, RootInterface)?
+                .serve_at(MPRIS_PATH, PlayerInterface::new(player))?
                 .build()
                 .await?,
         );
@@ -47,9 +40,7 @@ impl MprisServer {
 
         let iface = iface_ref.get().await;
 
-        iface
-            .metadata_changed(iface_ref.signal_emitter())
-            .await
+        iface.metadata_changed(iface_ref.signal_emitter()).await
     }
     pub async fn notify_playback_status(&self) -> zbus::Result<()> {
         let iface_ref = self

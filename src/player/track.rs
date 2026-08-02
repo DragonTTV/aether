@@ -10,7 +10,7 @@ pub struct Track {
 }
 #[derive(Clone, Default, Serialize, Deserialize)]
 pub struct Metadata {
-pub title: Option<String>,
+    pub title: Option<String>,
     pub artist: Option<String>,
     pub album: Option<String>,
 

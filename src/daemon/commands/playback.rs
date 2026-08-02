@@ -1,11 +1,10 @@
-
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
+use crate::database::Database;
 use crate::library::Library;
 use crate::mpris::server::MprisServer;
 use crate::player::{Player, RepeatMode, Track};
-use crate::database::Database;
 
 pub async fn handle(
     command: &str,
@@ -13,7 +12,7 @@ pub async fn handle(
     player: &Arc<Mutex<Player>>,
     library: &Library,
     database: &Database,
-    mpris: &MprisServer
+    mpris: &MprisServer,
 ) -> Result<String, String> {
     match command {
         "play" => {
@@ -34,7 +33,6 @@ pub async fn handle(
                 let _ = mpris.notify_position().await;
 
                 Ok(format!("Now Playing: {track_name}"))
-
             } else {
                 Ok(format!("Added to queue: {track_name}"))
             }
@@ -44,11 +42,11 @@ pub async fn handle(
                 let mut player = player.lock().unwrap();
                 player.pause()
             };
-            match result{
+            match result {
                 Ok(()) => {
                     let _ = mpris.notify_playback_status().await;
                     Ok("Playback paused".to_string())
-                },
+                }
                 Err(e) => Ok(e.to_string()),
             }
         }
@@ -62,7 +60,7 @@ pub async fn handle(
                 Ok(()) => {
                     let _ = mpris.notify_playback_status().await;
                     Ok("Playback resumed".to_string())
-                },
+                }
                 Err(e) => Ok(e.to_string()),
             }
         }
@@ -76,15 +74,14 @@ pub async fn handle(
                 Ok(()) => {
                     let _ = mpris.notify_playback_status().await;
                     let _ = mpris.notify_position().await;
-                    
+
                     Ok("Playback stopped".to_string())
-                },
+                }
                 Err(e) => Ok(e.to_string()),
             }
         }
 
         "next" => {
-            
             let result = {
                 let mut player = player.lock().unwrap();
                 player.next_track().cloned()
@@ -95,12 +92,15 @@ pub async fn handle(
                     let _ = mpris.notify_can_play_pause().await;
                     let _ = mpris.notify_playback_status().await;
                     let _ = mpris.notify_position().await;
-                    Ok(format!("Skipped to next track.\n\nNow playing: {}",track.display_name()))
-                },
+                    Ok(format!(
+                        "Skipped to next track.\n\nNow playing: {}",
+                        track.display_name()
+                    ))
+                }
                 Err(e) => Ok(e.to_string()),
             }
         }
-            
+
         "prev" => {
             let result = {
                 let mut player = player.lock().unwrap();
@@ -203,9 +203,7 @@ pub async fn handle(
                 .parse::<u64>()
                 .map_err(|_| "Invalid playlist ID.")?;
 
-            let playlist = database
-                .get_playlist(id)?
-                .ok_or("Playlist not found.")?;
+            let playlist = database.get_playlist(id)?.ok_or("Playlist not found.")?;
 
             let tracks: Vec<Track> = playlist
                 .track_ids
@@ -253,70 +251,64 @@ pub async fn handle(
                 }
             }
         }
-        "repeat" => {
-            match argument {
-                None => {
-                    let repeat = {
-                        let player = player.lock().unwrap();
-                        player.repeat()
-                    };
+        "repeat" => match argument {
+            None => {
+                let repeat = {
+                    let player = player.lock().unwrap();
+                    player.repeat()
+                };
 
-                    Ok(format!("Repeat: {}", repeat))
-                }
-                Some("off") => {
-                    {
-                        let mut player = player.lock().unwrap();
-                        player.set_repeat(RepeatMode::Off);
-                    }
-                    Ok("Repeat mode set to Off.".into())
-                }
-                Some("track") => {
-                    {
-                        let mut player = player.lock().unwrap();
-                        player.set_repeat(RepeatMode::Track);
-                    }
-                    Ok("Repeat mode set to Track.".into())
-                }
-                Some("queue") => {
-                    {
-                        let mut player = player.lock().unwrap();
-                        player.set_repeat(RepeatMode::Queue);
-                    }
-                    Ok("Repeat mode set to Queue.".into())
-                }
-                Some(_) => {
-                    Err("Invalid repeat mode.".into())
-                }
+                Ok(format!("Repeat: {}", repeat))
             }
-        }
-        "shuffle" => {
-            match argument {
-                None => {
-                    let guard = player.lock().unwrap();
-                    Ok(shuffle_status(&guard))
-                },
-
-                Some("on") => {
-                    {
-                        let mut player = player.lock().unwrap();
-                        player.set_shuffle(true);
-                    }
-                    let guard = player.lock().unwrap();
-                    Ok(shuffle_status(&guard))
+            Some("off") => {
+                {
+                    let mut player = player.lock().unwrap();
+                    player.set_repeat(RepeatMode::Off);
                 }
-
-                Some("off") => {
-                    {
-                        let mut player = player.lock().unwrap();
-                        player.set_shuffle(false);
-                    };
-                    let guard = player.lock().unwrap();
-                    Ok(shuffle_status(&guard))
-                }
-
-                Some(_) => Err("Invalid shuffle mode.".into()),
+                Ok("Repeat mode set to Off.".into())
             }
-        }
+            Some("track") => {
+                {
+                    let mut player = player.lock().unwrap();
+                    player.set_repeat(RepeatMode::Track);
+                }
+                Ok("Repeat mode set to Track.".into())
+            }
+            Some("queue") => {
+                {
+                    let mut player = player.lock().unwrap();
+                    player.set_repeat(RepeatMode::Queue);
+                }
+                Ok("Repeat mode set to Queue.".into())
+            }
+            Some(_) => Err("Invalid repeat mode.".into()),
+        },
+        "shuffle" => match argument {
+            None => {
+                let guard = player.lock().unwrap();
+                Ok(shuffle_status(&guard))
+            }
+
+            Some("on") => {
+                {
+                    let mut player = player.lock().unwrap();
+                    player.set_shuffle(true);
+                }
+                let guard = player.lock().unwrap();
+                Ok(shuffle_status(&guard))
+            }
+
+            Some("off") => {
+                {
+                    let mut player = player.lock().unwrap();
+                    player.set_shuffle(false);
+                };
+                let guard = player.lock().unwrap();
+                Ok(shuffle_status(&guard))
+            }
+
+            Some(_) => Err("Invalid shuffle mode.".into()),
+        },
         "seek" => {
             let seconds = argument
                 .ok_or("No seek position specified.")?

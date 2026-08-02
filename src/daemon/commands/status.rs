@@ -63,10 +63,7 @@ pub fn status(player: &Player) -> Result<String, String> {
                     format_duration(duration),
                 ));
             } else {
-                output.push_str(&format!(
-                    "{}\n",
-                    format_duration(status.position),
-                ));
+                output.push_str(&format!("{}\n", format_duration(status.position),));
             }
 
             output.push('\n');
