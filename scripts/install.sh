@@ -53,27 +53,35 @@ detect_architecture() {
 
 select_channel() {
     PRERELEASE=false
+    CHANNEL_SPECIFIED=false
 
     while [ $# -gt 0 ]; do
         case "$1" in
             --pre)
                 PRERELEASE=true
+                CHANNEL_SPECIFIED=true
                 ;;
             --stable)
                 PRERELEASE=false
+                CHANNEL_SPECIFIED=true
                 ;;
         esac
         shift
     done
 
-    if [ "$PRERELEASE" = false ]; then
+    if [ "$CHANNEL_SPECIFIED" = false ]; then
         printf "\n"
         printf "Select release channel:\n\n"
         printf "1) Stable (recommended)\n"
         printf "2) Pre-release\n\n"
-        printf "Choice [1/2]: "
 
-        read -r choice
+        if [ -t 0 ]; then
+            printf "Choice [1/2]: "
+            read -r choice
+        else
+            printf "Choice [1/2]: " >/dev/tty
+            read -r choice </dev/tty
+        fi
 
         case "$choice" in
             2)
@@ -83,6 +91,12 @@ select_channel() {
                 PRERELEASE=false
                 ;;
         esac
+    fi
+
+    if [ "$PRERELEASE" = true ]; then
+        success "Selected Pre-release"
+    else
+        success "Selected Stable"
     fi
 }
 
