@@ -74,9 +74,10 @@ async fn main() {
 
         match player.lock().unwrap().update(){
             UpdateEvent::TrackChanged => {
-                // let _ = mpris.notify_metadata().await;
-                // let _ = mpris.notify_playback_status().await;
-                // let _ = mpris.notify_position().await;
+                let _ = mpris.notify_metadata().await;
+                let _ = mpris.notify_can_play_pause().await;
+                let _ = mpris.notify_playback_status().await;
+                let _ = mpris.notify_position().await;
             }
             UpdateEvent::None => {}
             UpdateEvent::PlaybackStopped => {}

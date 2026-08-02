@@ -1,5 +1,4 @@
 use std::sync::{Arc, Mutex};
-
 use zbus::interface;
 
 use crate::player::{PlaybackState, Player};
@@ -67,6 +66,12 @@ impl PlayerInterface {
                     Value::from(duration.as_micros() as i64),
                 );
             }
+            if let Some(artwork) = &track.metadata.artwork {
+                metadata.insert(
+                    "mpris:artUrl".into(),
+                    Value::from(artwork.clone()),
+                );
+            }
         }
 
         metadata
@@ -115,31 +120,45 @@ impl PlayerInterface {
         1.0
     }
     fn next(&self) {
+        println!("MPRIS: Next");
         let mut player = self.player.lock().unwrap();
         let _ = player.next_track();
     }
 
     fn previous(&self) {
+        println!("MPRIS: Previous");
         let mut player = self.player.lock().unwrap();
         let _ = player.previous_track();
     }
 
-    fn pause(&self) {
-        let mut player = self.player.lock().unwrap();
-        let _ = player.pause();
+    async fn pause(&self,#[zbus(signal_emitter)] emitter: zbus::object_server::SignalEmitter<'_>,) {
+        println!("MPRIS Pause");
+
+        {
+            let mut player = self.player.lock().unwrap();
+            let _ = player.pause();
+        }
+
+        let _ = self.playback_status_changed(&emitter).await;
     }
 
-    fn play(&self) {
+    async fn play(&self, #[zbus(signal_emitter)] emitter: zbus::object_server::SignalEmitter<'_>,) {
+        println!("MPRIS: Play");
+        {
         let mut player = self.player.lock().unwrap();
         let _ = player.resume();
+        }
+        let _ = self.playback_status_changed(&emitter).await;
     }
 
     fn stop(&self) {
+        println!("MPRIS: Stop");
         let mut player = self.player.lock().unwrap();
         let _ = player.stop();
     }
 
     fn play_pause(&self) {
+        println!("MPRIS: Play-Pause");
         let mut player = self.player.lock().unwrap();
 
         match player.state {
@@ -155,5 +174,26 @@ impl PlayerInterface {
     fn position(&self) -> i64 {
         let player = self.player.lock().unwrap();
         player.position().as_micros() as i64
+    }
+
+    fn seek(&self, offset: i64) {
+        let player = self.player.lock().unwrap();
+
+        let current = player.position().as_micros() as i64;
+        let new_position = (current + offset).max(0);
+
+        let _ = player.seek(std::time::Duration::from_micros(
+            new_position as u64,
+        ));
+    }
+
+    fn set_position(&self, _track_id: ObjectPath<'_>, position: i64) {
+        let player = self.player.lock().unwrap();
+
+        let position = position.max(0);
+
+        let _ = player.seek(std::time::Duration::from_micros(
+            position as u64,
+        ));
     }
 }

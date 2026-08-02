@@ -28,9 +28,8 @@ pub async fn handle(
                 player.play(track)
             };
             if outcome.started_playing {
-                println!("Before notify_metadata");
                 let _ = mpris.notify_metadata().await;
-                println!("After notify_metadata");
+                let _ = mpris.notify_can_play_pause().await;
                 let _ = mpris.notify_playback_status().await;
                 let _ = mpris.notify_position().await;
 
@@ -47,7 +46,7 @@ pub async fn handle(
             };
             match result{
                 Ok(()) => {
-                    // let _ = mpris.notify_playback_status().await;
+                    let _ = mpris.notify_playback_status().await;
                     Ok("Playback paused".to_string())
                 },
                 Err(e) => Ok(e.to_string()),
@@ -61,7 +60,7 @@ pub async fn handle(
             };
             match result {
                 Ok(()) => {
-                    // let _ = mpris.notify_playback_status().await;
+                    let _ = mpris.notify_playback_status().await;
                     Ok("Playback resumed".to_string())
                 },
                 Err(e) => Ok(e.to_string()),
@@ -75,8 +74,8 @@ pub async fn handle(
             };
             match result {
                 Ok(()) => {
-                    // let _ = mpris.notify_playback_status().await;
-                    // let _ = mpris.notify_position().await;
+                    let _ = mpris.notify_playback_status().await;
+                    let _ = mpris.notify_position().await;
                     
                     Ok("Playback stopped".to_string())
                 },
@@ -92,9 +91,10 @@ pub async fn handle(
             };
             match result {
                 Ok(track) => {
-                    // let _ = mpris.notify_metadata().await;
-                    // let _ = mpris.notify_playback_status().await;
-                    // let _ = mpris.notify_position().await;
+                    let _ = mpris.notify_metadata().await;
+                    let _ = mpris.notify_can_play_pause().await;
+                    let _ = mpris.notify_playback_status().await;
+                    let _ = mpris.notify_position().await;
                     Ok(format!("Skipped to next track.\n\nNow playing: {}",track.display_name()))
                 },
                 Err(e) => Ok(e.to_string()),
@@ -110,6 +110,7 @@ pub async fn handle(
             match result {
                 Ok(track) => {
                     let _ = mpris.notify_metadata().await;
+                    let _ = mpris.notify_can_play_pause().await;
                     let _ = mpris.notify_playback_status().await;
                     let _ = mpris.notify_position().await;
 
@@ -147,9 +148,10 @@ pub async fn handle(
                 player.play_now(track);
             } // MutexGuard dropped here
 
-            // let _ = mpris.notify_metadata().await;
-            // let _ = mpris.notify_playback_status().await;
-            // let _ = mpris.notify_position().await;
+            let _ = mpris.notify_metadata().await;
+            let _ = mpris.notify_can_play_pause().await;
+            let _ = mpris.notify_playback_status().await;
+            let _ = mpris.notify_position().await;
 
             Ok("Playing immediately.".into())
         }
@@ -168,9 +170,10 @@ pub async fn handle(
             };
 
             if outcome.started_playing {
-                // let _ = mpris.notify_metadata().await;
-                // let _ = mpris.notify_playback_status().await;
-                // let _ = mpris.notify_position().await;
+                let _ = mpris.notify_metadata().await;
+                let _ = mpris.notify_can_play_pause().await;
+                let _ = mpris.notify_playback_status().await;
+                let _ = mpris.notify_position().await;
                 Ok(format!("Playing {}", track.display_name()))
             } else {
                 Ok(format!("Added {} to queue", track.display_name()))
@@ -188,9 +191,10 @@ pub async fn handle(
                 let mut player = player.lock().unwrap();
                 player.play_now(track.clone());
             }
-            // let _ = mpris.notify_metadata().await;
-            // let _ = mpris.notify_playback_status().await;
-            // let _ = mpris.notify_position().await;
+            let _ = mpris.notify_metadata().await;
+            let _ = mpris.notify_can_play_pause().await;
+            let _ = mpris.notify_playback_status().await;
+            let _ = mpris.notify_position().await;
             Ok(format!("Playing {}", track.display_name()))
         }
         "play_playlist" | "play_now_playlist" => {
@@ -221,9 +225,10 @@ pub async fn handle(
                     let mut player = player.lock().unwrap();
                     player.play_all_now(tracks);
                 }
-                // let _ = mpris.notify_metadata().await;
-                // let _ = mpris.notify_playback_status().await;
-                // let _ = mpris.notify_position().await;
+                let _ = mpris.notify_metadata().await;
+                let _ = mpris.notify_can_play_pause().await;
+                let _ = mpris.notify_playback_status().await;
+                let _ = mpris.notify_position().await;
                 Ok(format!(
                     "Playing playlist '{playlist_name}' ({track_count} tracks)."
                 ))
@@ -234,9 +239,10 @@ pub async fn handle(
                 };
 
                 if outcome.started_playing {
-                    // let _ = mpris.notify_metadata().await;
-                    // let _ = mpris.notify_playback_status().await;
-                    // let _ = mpris.notify_position().await;
+                    let _ = mpris.notify_metadata().await;
+                    let _ = mpris.notify_can_play_pause().await;
+                    let _ = mpris.notify_playback_status().await;
+                    let _ = mpris.notify_position().await;
                     Ok(format!(
                         "Playing playlist '{playlist_name}' ({track_count} tracks)."
                     ))
@@ -323,7 +329,7 @@ pub async fn handle(
                     .seek(Duration::from_secs(seconds))
                     .map_err(|e| e.to_string())?;
             }
-            // let _ = mpris.notify_position().await;
+            let _ = mpris.notify_position().await;
             Ok(format!("Seeked to {}s.", seconds))
         }
         _ => Err("Unknown playback command.".to_string()),
