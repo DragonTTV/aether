@@ -1,74 +1,162 @@
-#!/usr/bin/env sh
+#!/bin/sh
 
 set -e
 
 OWNER="DragonTTV"
 REPO="aether"
 
-TMP_DIR="$(mktemp -d)"
-
-cleanup() {
-    rm -rf "$TMP_DIR"
+error() {
+    printf "Error: %s\n" "$1" >&2
+    exit 1
 }
 
-trap cleanup EXIT
+step() {
+    printf "➜ %s\n" "$1"
+}
 
-echo
-echo "         Aether Bootstrap"
-echo
+success() {
+    printf "✓ %s\n" "$1"
+}
 
-echo "➜ Detecting operating system..."
+detect_platform() {
+    step "Detecting operating system..."
 
-OS="$(uname -s)"
+    case "$(uname -s)" in
+        Linux)
+            PLATFORM="linux"
+            ;;
+        *)
+            error "Unsupported operating system."
+            ;;
+    esac
 
-case "$OS" in
-    Linux)
-        PLATFORM="linux"
-        ;;
-    *)
-        echo "✗ Unsupported operating system: $OS"
-        exit 1
-        ;;
-esac
+    success "$PLATFORM detected"
+}
 
-echo "✓ $PLATFORM detected"
+detect_architecture() {
+    step "Detecting architecture..."
 
-echo "➜ Detecting architecture..."
+    case "$(uname -m)" in
+        x86_64|amd64)
+            TARGET="x86_64"
+            ;;
+        aarch64|arm64)
+            TARGET="aarch64"
+            ;;
+        *)
+            error "Unsupported architecture."
+            ;;
+    esac
 
-ARCH="$(uname -m)"
+    success "$TARGET detected"
+}
 
-case "$ARCH" in
-    x86_64|amd64)
-        TARGET="x86_64"
-        ;;
-    aarch64|arm64)
-        TARGET="aarch64"
-        ;;
-    *)
-        echo "✗ Unsupported architecture: $ARCH"
-        exit 1
-        ;;
-esac
+select_channel() {
+    PRERELEASE=false
 
-echo "✓ $TARGET detected"
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --pre)
+                PRERELEASE=true
+                ;;
+            --stable)
+                PRERELEASE=false
+                ;;
+        esac
+        shift
+    done
 
-ARCHIVE="aether-${PLATFORM}-${TARGET}.tar.gz"
-URL="https://github.com/${OWNER}/${REPO}/releases/latest/download/${ARCHIVE}"
+    if [ "$PRERELEASE" = false ]; then
+        printf "\n"
+        printf "Select release channel:\n\n"
+        printf "1) Stable (recommended)\n"
+        printf "2) Pre-release\n\n"
+        printf "Choice [1/2]: "
 
-echo "➜ Downloading Aether..."
+        read -r choice
 
-curl -fsSL "$URL" -o "$TMP_DIR/aether.tar.gz"
+        case "$choice" in
+            2)
+                PRERELEASE=true
+                ;;
+            *)
+                PRERELEASE=false
+                ;;
+        esac
+    fi
+}
 
-echo "✓ Download complete"
+resolve_version() {
+    API="https://api.github.com/repos/${OWNER}/${REPO}/releases"
 
-echo "➜ Extracting archive..."
+    step "Resolving latest release..."
 
-tar -xzf "$TMP_DIR/aether.tar.gz" -C "$TMP_DIR"
+    if [ "$PRERELEASE" = true ]; then
+        VERSION="$(
+            curl -fsSL "$API" |
+            sed -n 's/.*"tag_name":[[:space:]]*"\([^"]*\)".*/\1/p' |
+            head -n1
+        )"
+    else
+        VERSION="$(
+            curl -fsSL "$API/latest" |
+            sed -n 's/.*"tag_name":[[:space:]]*"\([^"]*\)".*/\1/p'
+        )"
+    fi
 
-echo "✓ Extraction complete"
+    [ -n "$VERSION" ] || error "Failed to determine release version."
 
-echo "➜ Launching installer..."
+    success "$VERSION"
+}
 
-chmod +x "$TMP_DIR/aether-setup"
+download_release() {
+    ARCHIVE="aether-${PLATFORM}-${TARGET}.tar.gz"
+    URL="https://github.com/${OWNER}/${REPO}/releases/download/${VERSION}/${ARCHIVE}"
 
-exec "$TMP_DIR/aether-setup" install
+    step "Downloading Aether..."
+
+    WORKDIR="$(mktemp -d)"
+
+    curl -fsSL "$URL" -o "$WORKDIR/$ARCHIVE"
+
+    success "Download complete"
+}
+
+extract_release() {
+    step "Extracting archive..."
+
+    tar -xzf "$WORKDIR/$ARCHIVE" -C "$WORKDIR"
+
+    RELEASE_DIR="$WORKDIR/aether-${PLATFORM}-${TARGET}"
+
+    success "Archive extracted"
+}
+
+run_installer() {
+    step "Running installer..."
+
+    chmod +x "$RELEASE_DIR/aether-setup"
+
+    "$RELEASE_DIR/aether-setup"
+}
+
+cleanup() {
+    step "Cleaning up..."
+
+    rm -rf "$WORKDIR"
+
+    success "Done"
+}
+
+main() {
+    detect_platform
+    detect_architecture
+    select_channel "$@"
+    resolve_version
+    download_release
+    extract_release
+    run_installer
+    cleanup
+}
+
+main "$@"
