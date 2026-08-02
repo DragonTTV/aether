@@ -1,0 +1,60 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build (${{ matrix.arch }})
+    runs-on: ubuntu-22.04
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            arch: x86_64
+          - target: aarch64-unknown-linux-gnu
+            arch: aarch64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install Cross
+        run: cargo install cross --git https://github.com/cross-rs/cross
+
+      - name: Build
+        run: cross build --release --target ${{ matrix.target }}
+
+      - name: Prepare Release
+        run: |
+          mkdir -p aether-linux-${{ matrix.arch }}/assets/linux
+
+          cp target/${{ matrix.target }}/release/aether aether-linux-${{ matrix.arch }}/
+          cp target/${{ matrix.target }}/release/aetherd aether-linux-${{ matrix.arch }}/
+          cp target/${{ matrix.target }}/release/aether-setup aether-linux-${{ matrix.arch }}/
+
+          cp assets/linux/aetherd.service \
+             aether-linux-${{ matrix.arch }}/assets/linux/
+
+      - name: Create Archive
+        run: |
+          tar -czf aether-linux-${{ matrix.arch }}.tar.gz \
+              aether-linux-${{ matrix.arch }}
+
+      - name: Upload Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            aether-linux-${{ matrix.arch }}.tar.gz
