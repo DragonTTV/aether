@@ -151,7 +151,7 @@ run_installer() {
 
     chmod +x "$RELEASE_DIR/aether-setup"
 
-    "$RELEASE_DIR/aether-setup"
+    "$RELEASE_DIR/aether-setup" install
 }
 
 cleanup() {
