@@ -1,8 +1,7 @@
 # Aether
 
 ![CI](https://github.com/DragonTTV/aether/actions/workflows/ci.yml/badge.svg)
-![Release](https://github.com/DragonTTV/aether/actions/workflows/release.yml/badge.svg)
-![GitHub Release](https://img.shields.io/github/v/release/DragonTTV/aether)
+![Latest Release](https://img.shields.io/github/v/release/DragonTTV/aether)
 ![License](https://img.shields.io/github/license/DragonTTV/aether)
 ![Downloads](https://img.shields.io/github/downloads/DragonTTV/aether/total)
 
