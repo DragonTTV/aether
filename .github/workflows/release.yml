@@ -10,63 +10,63 @@ permissions:
 
 jobs:
   build:
+    name: Build (${{ matrix.arch }})
+    runs-on: ubuntu-22.04
+
     strategy:
       fail-fast: false
       matrix:
         include:
-          - arch: x86_64
-            runner: ubuntu-22.04
-            artifact: aether-linux-x86_64
+          - target: x86_64-unknown-linux-gnu
+            arch: x86_64
 
-          - arch: aarch64
-            runner: ubuntu-22.04-arm
-            artifact: aether-linux-aarch64
-
-    name: Build (${{ matrix.arch }})
-    runs-on: ${{ matrix.runner }}
+          - target: aarch64-unknown-linux-gnu
+            arch: aarch64
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            pkg-config \
-            libasound2-dev
-
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
 
       - name: Cache Cargo
         uses: Swatinem/rust-cache@v2
 
+      - name: Install Cross
+        run: cargo install cross --locked
+
       - name: Build
-        run: cargo build --release
+        run: cross build --release --target ${{ matrix.target }}
 
       - name: Prepare Release
         run: |
-          mkdir -p ${{ matrix.artifact }}/assets/linux
+          RELEASE_DIR="aether-linux-${{ matrix.arch }}"
 
-          cp target/release/aether \
-             ${{ matrix.artifact }}/
+          mkdir -p "$RELEASE_DIR/assets/linux"
 
-          cp target/release/aetherd \
-             ${{ matrix.artifact }}/
+          cp target/${{ matrix.target }}/release/aether \
+             "$RELEASE_DIR/"
 
-          cp target/release/aether-setup \
-             ${{ matrix.artifact }}/
+          cp target/${{ matrix.target }}/release/aetherd \
+             "$RELEASE_DIR/"
+
+          cp target/${{ matrix.target }}/release/aether-setup \
+             "$RELEASE_DIR/"
 
           cp assets/linux/aetherd.service \
-             ${{ matrix.artifact }}/assets/linux/
+             "$RELEASE_DIR/assets/linux/"
 
       - name: Create Archive
         run: |
-          tar -czf ${{ matrix.artifact }}.tar.gz \
-              ${{ matrix.artifact }}
+          tar -czf aether-linux-${{ matrix.arch }}.tar.gz \
+              aether-linux-${{ matrix.arch }}
 
       - name: Upload Release
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ matrix.artifact }}.tar.gz
+          files: |
+            aether-linux-x86_64.tar.gz
+            aether-linux-aarch64.tar.gz
