@@ -9,64 +9,56 @@ permissions:
   contents: write
 
 jobs:
-  build:
-    name: Build (${{ matrix.arch }})
+  release:
+    name: Release (x86_64)
     runs-on: ubuntu-22.04
-
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - target: x86_64-unknown-linux-gnu
-            arch: x86_64
-
-          - target: aarch64-unknown-linux-gnu
-            arch: aarch64
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            pkg-config \
+            libasound2-dev
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.target }}
+          target: x86_64-unknown-linux-gnu
 
       - name: Cache Cargo
         uses: Swatinem/rust-cache@v2
 
-      - name: Install Cross
-        run: cargo install cross --locked
-
       - name: Build
-        run: cross build --release --target ${{ matrix.target }}
+        run: cargo build --release --target x86_64-unknown-linux-gnu
 
       - name: Prepare Release
         run: |
-          RELEASE_DIR="aether-linux-${{ matrix.arch }}"
+          mkdir -p aether-linux-x86_64/assets/linux
 
-          mkdir -p "$RELEASE_DIR/assets/linux"
+          cp target/x86_64-unknown-linux-gnu/release/aether \
+             aether-linux-x86_64/
 
-          cp target/${{ matrix.target }}/release/aether \
-             "$RELEASE_DIR/"
+          cp target/x86_64-unknown-linux-gnu/release/aetherd \
+             aether-linux-x86_64/
 
-          cp target/${{ matrix.target }}/release/aetherd \
-             "$RELEASE_DIR/"
-
-          cp target/${{ matrix.target }}/release/aether-setup \
-             "$RELEASE_DIR/"
+          cp target/x86_64-unknown-linux-gnu/release/aether-setup \
+             aether-linux-x86_64/
 
           cp assets/linux/aetherd.service \
-             "$RELEASE_DIR/assets/linux/"
+             aether-linux-x86_64/assets/linux/
 
       - name: Create Archive
         run: |
-          tar -czf aether-linux-${{ matrix.arch }}.tar.gz \
-              aether-linux-${{ matrix.arch }}
+          tar -czf aether-linux-x86_64.tar.gz \
+            aether-linux-x86_64
 
-      - name: Upload Release
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
           files: |
             aether-linux-x86_64.tar.gz
-            aether-linux-aarch64.tar.gz
