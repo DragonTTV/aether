@@ -1,4 +1,4 @@
-use aether::installer;
+use aether::setup;
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
@@ -18,6 +18,8 @@ enum Commands {
 
     /// Check installation health
     Doctor,
+    /// Downloads the latest release and updates Aether
+    Update,
 }
 
 fn main() {
@@ -25,12 +27,23 @@ fn main() {
 
     match cli.command {
         Commands::Install => {
-            if let Err(e) = installer::install() {
+            if let Err(e) = setup::install() {
                 eprintln!("\nInstallation failed:\n{e}");
                 std::process::exit(1);
             }
         }
         Commands::Uninstall => {}
-        Commands::Doctor => {}
+        Commands::Doctor => {
+            if let Err(e) = setup::doctor() {
+                eprintln!("\nDoctor failed:\n{e}");
+                std::process::exit(1);
+            }
+        }
+        Commands::Update => {
+            if let Err(e) = setup::update() {
+                eprintln!("\nUpdate failed:\n{e}");
+                std::process::exit(1);
+            }
+        }
     }
 }

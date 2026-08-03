@@ -116,3 +116,15 @@ pub fn service_dir() -> PathBuf {
         windows::service_dir()
     }
 }
+
+pub fn daemon_reload() -> Result<(), String> {
+    #[cfg(target_os = "linux")]
+    {
+        linux::daemon::daemon_reload()
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        todo!()
+    }
+}

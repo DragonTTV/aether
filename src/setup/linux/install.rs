@@ -4,8 +4,8 @@ use std::process::Command;
 use std::{fs, path::PathBuf};
 
 use crate::{
-    installer::{InstallState, ui},
     platform,
+    setup::{InstallState, ui},
 };
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
@@ -260,18 +260,12 @@ fn configure_path() -> Result<(), String> {
 
     let path = env::var("PATH").unwrap_or_default();
 
-    if path
-        .split(':')
-        .any(|p| Path::new(p) == bin_dir.as_path())
-    {
+    if path.split(':').any(|p| Path::new(p) == bin_dir.as_path()) {
         ui::success("PATH already configured");
         return Ok(());
     }
 
-    ui::warning(&format!(
-        "{} is not on your PATH.",
-        bin_dir.display()
-    ));
+    ui::warning(&format!("{} is not on your PATH.", bin_dir.display()));
 
     if !ui::confirm("Would you like Aether to configure it automatically?")? {
         ui::warning("Skipping PATH configuration.");
@@ -282,9 +276,7 @@ fn configure_path() -> Result<(), String> {
 
     let (config, line, reload) = if shell.ends_with("fish") {
         (
-            dirs::home_dir()
-                .unwrap()
-                .join(".config/fish/config.fish"),
+            dirs::home_dir().unwrap().join(".config/fish/config.fish"),
             "fish_add_path ~/.local/bin",
             "exec fish",
         )

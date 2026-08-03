@@ -68,3 +68,12 @@ pub fn ensure_running() -> Result<(), String> {
 
     start()
 }
+
+pub fn daemon_reload() -> Result<(), String> {
+    std::process::Command::new("systemctl")
+        .args(["--user", "daemon-reload"])
+        .status()
+        .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
