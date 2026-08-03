@@ -20,7 +20,7 @@ const RELEASES_API: &str = "https://api.github.com/repos/DragonTTV/aether/releas
 pub struct Release {
     pub version: String,
     pub download_url: String,
-    pub checksum_url: String,
+    pub checksum_url: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -88,16 +88,12 @@ fn release_from_github(release: GithubRelease) -> Result<Release, String> {
         .find(|a| a.name.ends_with(".tar.gz"))
         .ok_or("Release archive not found.")?;
 
-    let checksum = release
-        .assets
-        .iter()
-        .find(|a| a.name == "SHA256SUMS")
-        .ok_or("Checksum file not found.")?;
+    let checksum = release.assets.iter().find(|a| a.name == "SHA256SUMS");
 
     Ok(Release {
         version: release.tag_name,
         download_url: archive.browser_download_url.clone(),
-        checksum_url: checksum.browser_download_url.clone(),
+        checksum_url: checksum.map(|c| c.browser_download_url.clone()),
     })
 }
 
@@ -129,10 +125,14 @@ pub fn download_release(release: &Release) -> Result<PathBuf, String> {
 }
 
 pub fn verify_checksum(archive: &Path, release: &Release) -> Result<(), String> {
+    let Some(url) = &release.checksum_url else {
+        return Ok(());
+    };
+
     let client = Client::new();
 
     let checksum_file = client
-        .get(&release.checksum_url)
+        .get(url)
         .header("User-Agent", "Aether")
         .send()
         .map_err(|e| e.to_string())?

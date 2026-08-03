@@ -36,8 +36,12 @@ pub fn update() -> Result<(), String> {
     ui::step("Downloading...");
     let archive = common::download_release(&release)?;
 
-    ui::step("Verifying...");
-    common::verify_checksum(&archive, &release)?;
+    if release.checksum_url.is_some() {
+        ui::step("Verifying...");
+        common::verify_checksum(&archive, &release)?;
+    } else {
+        ui::warning("Release does not provide a checksum. Skipping verification.");
+    }
 
     ui::step("Stopping daemon...");
     platform::stop_daemon()?;

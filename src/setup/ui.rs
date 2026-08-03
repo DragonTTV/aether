@@ -66,4 +66,3 @@ fn open_tty() -> io::Result<Box<dyn BufRead>> {
     let con = OpenOptions::new().read(true).open("CONIN$")?;
     Ok(Box::new(io::BufReader::new(con)))
 }
-

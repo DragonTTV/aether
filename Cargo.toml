@@ -1,6 +1,6 @@
 [package]
 name = "aether"
-version = "1.0.0"
+version = "1.0.0-alpha.3"
 edition = "2024"
 description = "A daemon-based terminal music player"
 [dependencies]
